@@ -1,0 +1,261 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { isValidImageFile } from "@/lib/security/image-validation";
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+const productSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(200),
+  short_description: z.string().trim().max(500).optional(),
+  description: z.string().trim().max(20000).optional(),
+  category_id: z.string().optional(),
+  brand_id: z.string().optional(),
+  status: z.enum(["draft", "active", "inactive", "archived"]),
+});
+
+export async function createProductAction(formData: FormData) {
+  await requireAdminCapability("products");
+  const parsed = productSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { name, short_description, description, category_id, brand_id, status } = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data, error } = await supabase
+    .from("products")
+    .insert({
+      name,
+      slug: slugify(name),
+      short_description: short_description || null,
+      description: description || null,
+      category_id: category_id ? Number(category_id) : null,
+      brand_id: brand_id ? Number(brand_id) : null,
+      status,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) return { error: error?.message ?? "Failed to create product" };
+
+  revalidatePath("/admin/products");
+  redirect(`/admin/products/${data.id}`);
+}
+
+export async function updateProductAction(id: number, formData: FormData) {
+  await requireAdminCapability("products");
+  const parsed = productSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { name, short_description, description, category_id, brand_id, status } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("products")
+    .update({
+      name,
+      slug: slugify(name),
+      short_description: short_description || null,
+      description: description || null,
+      category_id: category_id ? Number(category_id) : null,
+      brand_id: brand_id ? Number(brand_id) : null,
+      status,
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/products");
+  revalidatePath(`/admin/products/${id}`);
+  return { success: true };
+}
+
+export async function deleteProductAction(id: number) {
+  await requireAdminCapability("products");
+  const supabase = await createClient();
+  const { error } = await supabase.from("products").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/products");
+  return { success: true };
+}
+
+const variantSchema = z.object({
+  sku: z.string().trim().min(1, "SKU is required").max(80),
+  variant_name: z.string().trim().max(120).optional(),
+  color_id: z.string().optional(),
+  price: z.coerce.number().min(0),
+  compare_price: z.string().optional(),
+  stock_quantity: z.coerce.number().int().min(0),
+  low_stock_threshold: z.coerce.number().int().min(0),
+  is_active: z.string().optional(),
+});
+
+export async function createVariantAction(productId: number, formData: FormData) {
+  await requireAdminCapability("products");
+  const parsed = variantSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { sku, variant_name, color_id, price, compare_price, stock_quantity, low_stock_threshold, is_active } =
+    parsed.data;
+
+  const supabase = await createClient();
+  const colorResult = await validateVariantColor(supabase, productId, color_id);
+  if (colorResult.error) return colorResult;
+  const { error } = await supabase.from("product_variants").insert({
+    product_id: productId,
+    sku,
+    variant_name: variant_name || null,
+    color_id: color_id ? Number(color_id) : null,
+    price,
+    compare_price: compare_price ? Number(compare_price) : null,
+    stock_quantity,
+    low_stock_threshold,
+    is_active: is_active === "on",
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/products/${productId}`);
+  return { success: true };
+}
+
+export async function updateVariantAction(id: number, productId: number, formData: FormData) {
+  await requireAdminCapability("products");
+  const parsed = variantSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { sku, variant_name, color_id, price, compare_price, stock_quantity, low_stock_threshold, is_active } =
+    parsed.data;
+
+  const supabase = await createClient();
+  const colorResult = await validateVariantColor(supabase, productId, color_id);
+  if (colorResult.error) return colorResult;
+  const { error } = await supabase
+    .from("product_variants")
+    .update({
+      sku,
+      variant_name: variant_name || null,
+      color_id: color_id ? Number(color_id) : null,
+      price,
+      compare_price: compare_price ? Number(compare_price) : null,
+      stock_quantity,
+      low_stock_threshold,
+      is_active: is_active === "on",
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/products/${productId}`);
+  return { success: true };
+}
+
+async function validateVariantColor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  productId: number,
+  colorId: string | undefined,
+) {
+  const { data: product } = await supabase
+    .from("products")
+    .select("category_id")
+    .eq("id", productId)
+    .single();
+  const { data: category } = product?.category_id
+    ? await supabase.from("categories").select("is_color_filter_category").eq("id", product.category_id).single()
+    : { data: null };
+
+  if (category?.is_color_filter_category && !colorId) {
+    return { error: "Choose a color for this product variant." };
+  }
+  if (!category?.is_color_filter_category && colorId) {
+    return { error: "Colors can only be assigned to products in a color filter category." };
+  }
+  if (colorId && !/^\d+$/.test(colorId)) {
+    return { error: "Choose a valid color." };
+  }
+  if (colorId) {
+    const { data: color } = await supabase
+      .from("product_colors")
+      .select("id")
+      .eq("id", Number(colorId))
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!color) return { error: "That color is inactive or no longer available." };
+  }
+  return { error: null };
+}
+
+export async function deleteVariantAction(id: number, productId: number) {
+  await requireAdminCapability("products");
+  const supabase = await createClient();
+  const { error } = await supabase.from("product_variants").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/products/${productId}`);
+  return { success: true };
+}
+
+export async function addProductImageAction(productId: number, formData: FormData) {
+  await requireAdminCapability("products");
+  const file = formData.get("image") as File | null;
+  if (!file || file.size === 0 || file.size > 5 * 1024 * 1024) return { error: "Choose an image under 5 MB." };
+  if (!(await isValidImageFile(file, ["image/jpeg", "image/png", "image/webp"]))) return { error: "The uploaded file is not a valid JPG, PNG, or WEBP image." };
+
+  const supabase = await createClient();
+  const adminClient = createAdminClient();
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `${productId}/${crypto.randomUUID()}.${ext}`;
+
+  // Use admin client for storage (bypasses RLS, has full bucket access)
+  const { error: uploadError } = await adminClient.storage.from("product-images").upload(path, file);
+  if (uploadError) return { error: uploadError.message };
+
+  const { data: publicUrl } = adminClient.storage.from("product-images").getPublicUrl(path);
+
+  const { count } = await supabase
+    .from("product_images")
+    .select("*", { count: "exact", head: true })
+    .eq("product_id", productId);
+
+  const { error } = await supabase.from("product_images").insert({
+    product_id: productId,
+    image_url: publicUrl.publicUrl,
+    sort_order: count ?? 0,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/products/${productId}`);
+  return { success: true };
+}
+
+export async function deleteProductImageAction(imageId: number, productId: number) {
+  await requireAdminCapability("products");
+  const supabase = await createClient();
+  const { error } = await supabase.from("product_images").delete().eq("id", imageId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/products/${productId}`);
+  return { success: true };
+}

@@ -1,0 +1,17 @@
+import { createClient } from "@/lib/supabase/server";
+import { CategoryList } from "@/components/admin/category-list";
+
+export default async function AdminCategoriesPage() {
+  const supabase = await createClient();
+  const { data: categories } = await supabase
+    .from("categories")
+    .select("id, name, description, parent_id, is_active, sort_order, is_color_filter_category")
+    .order("sort_order", { ascending: true });
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold text-slate-900">Categories</h1>
+      <CategoryList categories={categories ?? []} />
+    </div>
+  );
+}
