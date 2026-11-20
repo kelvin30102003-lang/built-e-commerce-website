@@ -3,7 +3,6 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { loginAction, registerAction } from "@/lib/actions/auth";
-import { createClient } from "@/lib/supabase/client";
 
 export function LoginRegisterPanel({
   defaultTab,
@@ -67,59 +66,9 @@ export function LoginRegisterPanel({
         ) : (
           <CreateAccountForm redirectTo={redirectTo} />
         )}
-
-        <GoogleSignInButton redirectTo={redirectTo} />
       </div>
 
     </div>
-  );
-}
-
-function GoogleSignInButton({ redirectTo }: { redirectTo: string }) {
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleGoogleSignIn() {
-    setError(null);
-    startTransition(async () => {
-      const supabase = createClient();
-      const callbackUrl = new URL("/auth/callback", window.location.origin);
-      callbackUrl.searchParams.set("next", redirectTo);
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: callbackUrl.toString() },
-      });
-      if (oauthError) setError("Google sign-in is unavailable right now. Please try again.");
-    });
-  }
-
-  return (
-    <div className="mt-6 border-t border-outline-variant/70 pt-5">
-      <div className="relative mb-4 text-center">
-        <span className="bg-surface-lowest px-3 text-xs text-secondary">or continue with</span>
-      </div>
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        disabled={isPending}
-        className="flex w-full items-center justify-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-low disabled:cursor-wait disabled:opacity-60"
-      >
-        <GoogleIcon />
-        {isPending ? "Connecting to Google..." : "Continue with Google"}
-      </button>
-      {error && <p className="mt-3 text-sm text-error">{error}</p>}
-    </div>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 48 48" className="h-5 w-5">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z" />
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.96 46.98 31.85 46.98 24.55Z" />
-      <path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19Z" />
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.45-4.88 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z" />
-    </svg>
   );
 }
 

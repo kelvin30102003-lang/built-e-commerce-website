@@ -89,14 +89,7 @@ export function SiteFooter() {
                   <span className="text-[10px] text-gray-400">❤</span> All Products
                 </Link>
               </li>
-              <li>
-                <Link
-                  href="/track"
-                  className="flex items-center gap-1.5 transition-colors hover:text-white hover:underline"
-                >
-                  <span className="text-[10px] text-gray-400">❤</span> Contact lens
-                </Link>
-              </li>
+              
               
             </ul>
           </div>

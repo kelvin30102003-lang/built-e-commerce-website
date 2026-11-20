@@ -9,7 +9,8 @@ import { HeartIcon, UserIcon } from "@/components/shop/icons";
 const NAV_LINKS = [
   {href: "/", label: "Home" },
   { href: "/shop", label: "Shop" },
-  { href: "/contact", label: "Contact" },
+  { href: "/orders", label: "Order" },
+  { href: "/contact", label: "Contact " },
 ];
 
 export async function SiteHeader() {
