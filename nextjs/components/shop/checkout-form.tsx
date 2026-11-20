@@ -23,12 +23,21 @@ interface PaymentMethod {
   instructions: string | null;
 }
 
+interface SavedAddress {
+  full_name: string;
+  phone: string;
+  address_line1: string;
+  township: string | null;
+}
+
 export function CheckoutForm({
   cart,
   paymentMethods,
+  savedAddress,
 }: {
   cart: CartDetails;
   paymentMethods: PaymentMethod[];
+  savedAddress: SavedAddress | null;
 }) {
   const [shippingMethod, setShippingMethod] =
     useState<ShippingMethodKey>("standard");
@@ -119,18 +128,19 @@ export function CheckoutForm({
           </h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Full name" name="fullName" required />
+            <Field label="Full name" name="fullName" required defaultValue={savedAddress?.full_name ?? ""} />
 
-            <Field label="Phone" name="phone" required />
+            <Field label="Phone" name="phone" required defaultValue={savedAddress?.phone ?? ""} />
 
             <Field
               label="Address line 1"
               name="addressLine1"
               required
+              defaultValue={savedAddress?.address_line1 ?? ""}
               className="sm:col-span-2"
             />
 
-            <SelectField label="Township" name="township" required>
+            <SelectField label="Township" name="township" required defaultValue={savedAddress?.township ?? ""}>
               <option value="">Select township</option>
               {YANGON_TOWNSHIPS.map((township) => (
                 <option key={township} value={township}>{township}</option>
@@ -524,11 +534,13 @@ function Field({
   name,
   required,
   className,
+  defaultValue,
 }: {
   label: string;
   name: string;
   required?: boolean;
   className?: string;
+  defaultValue?: string;
 }) {
   return (
     <div className={className}>
@@ -544,6 +556,7 @@ function Field({
         type="text"
         name={name}
         required={required}
+        defaultValue={defaultValue}
         className="mt-1 block w-full bg-surface-low px-3 py-3 text-sm text-foreground placeholder:text-on-surface-variant/60 focus:bg-surface-container-low focus:outline-none"
       />
     </div>
@@ -554,11 +567,13 @@ function SelectField({
   label,
   name,
   required,
+  defaultValue,
   children,
 }: {
   label: string;
   name: string;
   required?: boolean;
+  defaultValue?: string;
   children: ReactNode;
 }) {
   return (
@@ -570,7 +585,7 @@ function SelectField({
         id={name}
         name={name}
         required={required}
-        defaultValue={name === "state" ? "Yangon" : ""}
+        defaultValue={defaultValue ?? (name === "state" ? "Yangon" : "")}
         className="mt-1 block w-full bg-surface-low px-3 py-3 text-sm text-foreground focus:bg-surface-container-low focus:outline-none"
       >
         {children}

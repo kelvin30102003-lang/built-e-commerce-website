@@ -1,10 +1,7 @@
 import Link from "next/link";
-import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { HomeIcon, GridIcon, UserIcon } from "@/components/shop/icons";
 
-export async function MobileTabBar() {
-  const { user } = await getCurrentProfile();
-
+export function MobileTabBar({ user }: { user: { id: string } | null }) {
   const tabs = [
     { href: "/", label: "Discover", icon: HomeIcon },
     { href: "/shop", label: "Shop", icon: GridIcon },

@@ -7,7 +7,11 @@ interface ErrorMessageProps {
 
 export function ErrorMessage({ error, onRetry }: ErrorMessageProps) {
   const message =
-    error instanceof Error ? error.message : 'An unexpected error occurred.';
+    error instanceof Error
+      ? error.message
+      : error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+        ? error.message
+        : 'An unexpected error occurred.';
   return (
     <div className="rounded-md bg-error-100 p-4 text-error-800">
       <p className="mb-2 font-semibold">Error</p>

@@ -1,12 +1,20 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/shop/product-card";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/get-current-profile";
 
-export default async function WishlistPage() {
+export default async function WishlistPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const PAGE_SIZE = 24;
+  const page = /^\d{1,5}$/.test(params.page ?? "") ? Math.max(1, Number(params.page)) : 1;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
-  if (!user) {
+  if (!user || user.is_anonymous) {
     return (
       <section className="mx-auto max-w-2xl px-4 py-16 text-center">
         <h1 className="text-2xl font-semibold uppercase tracking-tight text-foreground">Your Wishlist</h1>
@@ -22,7 +30,9 @@ export default async function WishlistPage() {
     .from("wishlist_items")
     .select("product_id, created_at")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("product_id", { ascending: false })
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   if (wishlistError) {
     return (
@@ -33,13 +43,22 @@ export default async function WishlistPage() {
     );
   }
 
-  const productIds = (savedItems ?? []).map((item) => item.product_id);
+  const hasNext = (savedItems?.length ?? 0) > PAGE_SIZE;
+  const productIds = (savedItems ?? []).slice(0, PAGE_SIZE).map((item) => item.product_id);
   const { data: products, error: productsError } = productIds.length
     ? await supabase
         .from("products")
-        .select("id, name, slug, short_description, product_images(image_url, sort_order), product_variants(id, price, compare_price, is_active, stock_quantity)")
+        .select("id, name, slug, product_images(id, image_url, sort_order), product_variants(id, price, compare_price, is_active, stock_quantity)")
         .in("id", productIds)
         .eq("status", "active")
+        .eq("product_variants.is_active", true)
+        .gt("product_variants.stock_quantity", 0)
+        .order("price", { referencedTable: "product_variants", ascending: true })
+        .order("id", { referencedTable: "product_variants", ascending: true })
+        .limit(1, { referencedTable: "product_variants" })
+        .order("sort_order", { referencedTable: "product_images", ascending: true })
+        .order("id", { referencedTable: "product_images", ascending: true })
+        .limit(1, { referencedTable: "product_images" })
     : { data: [], error: null };
 
   if (productsError) {
@@ -64,7 +83,7 @@ export default async function WishlistPage() {
           <span className="text-[11px] font-semibold uppercase tracking-label text-secondary">Saved products</span>
           <h1 className="mt-1 text-2xl font-semibold uppercase tracking-tight text-foreground">Your Wishlist</h1>
         </div>
-        <span className="text-sm text-secondary">{savedProducts.length} items</span>
+        <span className="text-sm text-secondary">{savedProducts.length} shown</span>
       </div>
 
       {savedProducts.length === 0 ? (
@@ -79,6 +98,13 @@ export default async function WishlistPage() {
           ))}
         </div>
       )}
+      {(page > 1 || hasNext) ? (
+        <nav aria-label="Wishlist pages" className="mt-8 flex items-center justify-between border-t border-surface-dim pt-5">
+          {page > 1 ? <Link href={page === 2 ? "/wishlist" : `/wishlist?page=${page - 1}`} className="rounded-lg border border-surface-dim px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-low">Previous</Link> : <span />}
+          <span className="text-sm text-secondary">Page {page}</span>
+          {hasNext ? <Link href={`/wishlist?page=${page + 1}`} className="rounded-lg border border-surface-dim px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-low">Next</Link> : <span />}
+        </nav>
+      ) : null}
     </section>
   );
 }

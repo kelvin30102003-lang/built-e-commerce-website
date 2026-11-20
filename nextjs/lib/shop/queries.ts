@@ -27,9 +27,15 @@ function encodeCursor(payload: CursorPayload): string {
 }
 
 function decodeCursor(cursor: string): CursorPayload | null {
+  if (cursor.length > 1024) return null;
   try {
     const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
-    if (typeof parsed?.sortValue === "string" && typeof parsed?.id === "number") {
+    if (
+      typeof parsed?.sortValue === "string" &&
+      parsed.sortValue.length <= 256 &&
+      Number.isSafeInteger(parsed?.id) &&
+      parsed.id > 0
+    ) {
       return parsed;
     }
     return null;
@@ -49,14 +55,12 @@ export async function fetchProducts(
   supabase: SupabaseClient<Database>,
   filters: ProductListFilters,
 ) {
-  const sort: ProductSort = filters.sort ?? "newest";
-  const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE;
+  const sort: ProductSort = filters.sort && filters.sort in SORT_COLUMN ? filters.sort : "newest";
+  const pageSize = Math.max(1, Math.min(Math.trunc(filters.pageSize ?? DEFAULT_PAGE_SIZE), 48));
   const sortColumn = SORT_COLUMN[sort];
   const ascending = sort === "name_asc";
 
-  const selectFields = `id, name, slug, short_description, status, created_at,
-       category:categories(id, name, slug),
-       brand:brands(id, name, slug),
+  const selectFields = `id, name, slug,
        product_variants(id, price, compare_price, stock_quantity, is_active),
        product_images(id, image_url, sort_order)` as const;
 
@@ -65,31 +69,39 @@ export async function fetchProducts(
     .select(selectFields)
     .eq("status", "active");
 
-  if (filters.search) {
-    query = query.ilike("name", `%${filters.search}%`);
+  const search = filters.search?.trim().slice(0, 100);
+  if (search) {
+    const escapedSearch = search.replace(/[\\%_]/g, "\\$&");
+    query = query.ilike("name", `%${escapedSearch}%`);
   }
 
-  if (filters.categorySlug) {
-    const { data: category } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("slug", filters.categorySlug)
-      .single();
-    if (category) {
-      query = query.eq("category_id", category.id);
-    }
+  const [categoryResult, brandResult] = await Promise.all([
+    filters.categorySlug
+      ? supabase.from("categories").select("id").eq("slug", filters.categorySlug).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    filters.brandSlug
+      ? supabase.from("brands").select("id").eq("slug", filters.brandSlug).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  if ((filters.categorySlug && (categoryResult.error || !categoryResult.data)) ||
+      (filters.brandSlug && (brandResult.error || !brandResult.data))) {
+    const lookupFailed = Boolean(categoryResult.error || brandResult.error);
+    if (lookupFailed) console.error("Could not resolve product filters.");
+    return { products: [], pageSize, hasNext: false, hasPrev: false, nextCursor: null, prevCursor: null, error: lookupFailed };
   }
+  if (categoryResult.data) query = query.eq("category_id", categoryResult.data.id);
+  if (brandResult.data) query = query.eq("brand_id", brandResult.data.id);
 
-  if (filters.brandSlug) {
-    const { data: brand } = await supabase
-      .from("brands")
-      .select("id")
-      .eq("slug", filters.brandSlug)
-      .single();
-    if (brand) {
-      query = query.eq("brand_id", brand.id);
-    }
-  }
+  // Listing cards only need the cheapest in-stock variant and the lead image.
+  query = query
+    .eq("product_variants.is_active", true)
+    .gt("product_variants.stock_quantity", 0)
+    .order("price", { referencedTable: "product_variants", ascending: true })
+    .order("id", { referencedTable: "product_variants", ascending: true })
+    .limit(1, { referencedTable: "product_variants" })
+    .order("sort_order", { referencedTable: "product_images", ascending: true })
+    .order("id", { referencedTable: "product_images", ascending: true })
+    .limit(1, { referencedTable: "product_images" });
 
   // Paging "before" a cursor means walking backwards, so both the row order
   // and the comparison direction flip; we re-reverse the page after fetching.
@@ -116,7 +128,7 @@ export async function fetchProducts(
       "Could not load products:",
       `code=${error.code}; message=${error.message}; details=${error.details ?? ""}; hint=${error.hint ?? ""}`,
     );
-    return { products: [], pageSize, hasNext: false, hasPrev: false, nextCursor: null, prevCursor: null };
+    return { products: [], pageSize, hasNext: false, hasPrev: false, nextCursor: null, prevCursor: null, error: true };
   }
 
   const rows = data ?? [];
@@ -141,6 +153,7 @@ export async function fetchProducts(
     hasPrev: goingBackward ? hasMore : paging !== null,
     nextCursor,
     prevCursor,
+    error: false,
   };
 }
 
@@ -157,11 +170,18 @@ export async function fetchProductBySlug(supabase: SupabaseClient<Database>, slu
     )
     .eq("slug", slug)
     .eq("status", "active")
+    .eq("reviews.status", "approved")
+    .order("sort_order", { referencedTable: "product_images", ascending: true })
+    .order("id", { referencedTable: "product_images", ascending: true })
+    .limit(12, { referencedTable: "product_images" })
+    .order("created_at", { referencedTable: "reviews", ascending: false })
+    .order("id", { referencedTable: "reviews", ascending: false })
+    .limit(20, { referencedTable: "reviews" })
     .maybeSingle();
 
   if (error) {
-    console.error("Could not load product:", error);
-    return null;
+    console.error("Could not load product:", error.message);
+    throw new Error("Could not load this product. Please try again.");
   }
   return data;
 }

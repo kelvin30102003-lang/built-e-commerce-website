@@ -16,7 +16,6 @@ const ADMIN_DATA_TABLES = [
   "product_images",
   "categories",
   "brands",
-  "product_colors",
   "coupons",
   "profiles",
   "contact_settings",

@@ -5,7 +5,6 @@ import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { SHIPPING_METHODS, YANGON_TOWNSHIPS, isManualPaymentMethod, type ShippingMethodKey } from "@/lib/shop/constants";
 import { isValidImageFile } from "@/lib/security/image-validation";
-import { consumeActionRateLimit } from "@/lib/security/rate-limit";
 
 const checkoutSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
@@ -38,10 +37,6 @@ export async function placeOrderAction(formData: FormData) {
   if (user.is_anonymous && requestedPaymentMethod !== "cod") {
     return { error: "Guest checkout is available with Cash on Delivery only.", orderNumber: null };
   }
-  if (!(await consumeActionRateLimit("checkout", user.id, 8, 3600))) {
-    return { error: "Too many checkout attempts. Please try again later.", orderNumber: null };
-  }
-
   const parsed = checkoutSchema.safeParse({
     fullName: formData.get("fullName"),
     phone: formData.get("phone"),
@@ -112,9 +107,17 @@ export async function placeOrderAction(formData: FormData) {
   });
 
   if (error) {
+    if (slipImagePath) {
+      const { error: cleanupError } = await supabase.storage.from("payment-slips").remove([slipImagePath]);
+      if (cleanupError) console.error("Failed to clean up unused payment slip:", cleanupError.message);
+    }
     return { error: error.message, orderNumber: null };
   }
 
   const orderNumber = result?.[0]?.order_number ?? null;
+  if (!orderNumber && slipImagePath) {
+    const { error: cleanupError } = await supabase.storage.from("payment-slips").remove([slipImagePath]);
+    if (cleanupError) console.error("Failed to clean up unused payment slip:", cleanupError.message);
+  }
   return { error: null, orderNumber };
 }

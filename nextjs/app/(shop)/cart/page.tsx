@@ -2,16 +2,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/get-current-profile";
 import { fetchCartDetails } from "@/lib/shop/cart";
 import { formatMmk } from "@/lib/shop/format";
 import { CartLineControls } from "@/components/shop/cart-line-controls";
 
 export default async function CartPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/guest-session?redirect=/cart");
 
   const cart = await fetchCartDetails(supabase, user.id);
+  const hasUnavailableItems = cart.items.some((item) => !item.isAvailable || item.quantity > item.stockQuantity);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-12">
@@ -40,12 +42,17 @@ export default async function CartPage() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <Link href={`/products/${item.slug}`} className="font-medium text-foreground hover:text-secondary">
-                    {item.productName}
-                  </Link>
+                  {item.slug ? (
+                    <Link href={`/products/${item.slug}`} className="font-medium text-foreground hover:text-secondary">{item.productName}</Link>
+                  ) : <p className="font-medium text-foreground">{item.productName}</p>}
                   {item.variantName && (
                     <p className="text-[11px] font-semibold uppercase tracking-label text-secondary">
                       {item.variantName}
+                    </p>
+                  )}
+                  {(!item.isAvailable || item.quantity > item.stockQuantity) && (
+                    <p className="mt-1 text-xs font-medium text-error">
+                      {!item.isAvailable ? "This item is no longer available. Remove it to continue." : `Only ${item.stockQuantity} left. Reduce the quantity to continue.`}
                     </p>
                   )}
                   <p className="mt-1 font-semibold text-primary">{formatMmk(item.unitPrice)}</p>
@@ -64,12 +71,13 @@ export default async function CartPage() {
               <span className="font-medium text-foreground">{formatMmk(cart.subtotal)}</span>
             </div>
             <p className="mt-1 text-xs text-secondary">Shipping calculated at checkout.</p>
-            <Link
-              href="/checkout"
-              className="mt-6 block bg-primary px-6 py-4 text-center text-[11px] font-semibold uppercase tracking-label-wide text-primary-foreground transition-colors hover:bg-surface-highest hover:text-foreground"
-            >
-              Proceed to Checkout
-            </Link>
+            {hasUnavailableItems ? (
+              <p role="status" className="mt-6 bg-surface-low p-4 text-sm text-secondary">Update or remove unavailable items before checkout.</p>
+            ) : (
+              <Link href="/checkout" className="mt-6 block bg-primary px-6 py-4 text-center text-[11px] font-semibold uppercase tracking-label-wide text-primary-foreground transition-colors hover:bg-surface-highest hover:text-foreground">
+                Proceed to Checkout
+              </Link>
+            )}
           </div>
         </div>
       )}

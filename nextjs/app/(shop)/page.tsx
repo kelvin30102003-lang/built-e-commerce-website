@@ -1,38 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import {
-  ProductCard,
-  type ProductCardData,
-} from "@/components/shop/product-card";
+import { ProductCard } from "@/components/shop/product-card";
 import { fetchWishlistedProductIds } from "@/lib/shop/wishlist";
+import { fetchProducts } from "@/lib/shop/queries";
 
 export default async function HomePage() {
   const supabase = await createClient();
 
-  // Fetch products – gracefully handle missing tables
-  let products: (ProductCardData & { id: number })[] = [];
-
-  try {
-    const { data, error } = await supabase
-      .from("products")
-      .select(
-        `id, name, slug, short_description, status, created_at,
-         category:categories(id, name, slug),
-         brand:brands(id, name, slug),
-         product_variants(id, price, compare_price, stock_quantity, is_active),
-         product_images(id, image_url, sort_order)`,
-        { count: "exact" },
-      )
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .range(0, 7);
-
-    if (!error && data) {
-      products = data;
-    }
-  } catch {
-    // table may not exist yet
-  }
+  const { products, error: productsError } = await fetchProducts(supabase, { pageSize: 8 });
 
   const wishlistedProductIds = await fetchWishlistedProductIds(
     supabase,
@@ -96,10 +71,10 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          {products.length === 0 ? (
-            <p className="mt-6 text-secondary ">
-              No products yet. Check back soon!
-            </p>
+          {productsError ? (
+            <p role="status" className="mt-6 text-secondary">Products could not be loaded. Please refresh and try again.</p>
+          ) : products.length === 0 ? (
+            <p className="mt-6 text-secondary">No products yet. Check back soon!</p>
           ) : (
             <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {products.map((product) => (

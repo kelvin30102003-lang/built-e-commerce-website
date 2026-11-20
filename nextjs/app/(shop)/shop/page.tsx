@@ -17,17 +17,18 @@ export default async function ShopPage({
   const params = await searchParams;
   const supabase = await createClient();
 
-  const sort = (params.sort as "newest" | "name_asc") ?? "newest";
+  const sort = params.sort === "name_asc" ? "name_asc" : "newest";
   const direction = params.direction === "before" ? "before" : "after";
+  const cursor = params.cursor?.slice(0, 1024);
 
-  const [{ products, hasNext, hasPrev, nextCursor, prevCursor }, categories, brands] =
+  const [{ products, hasNext, hasPrev, nextCursor, prevCursor, error: productsError }, categories, brands] =
     await Promise.all([
       fetchProducts(supabase, {
         search: params.q,
         categorySlug: params.category,
         brandSlug: params.brand,
         sort,
-        cursor: params.cursor,
+        cursor,
         direction,
       }),
       fetchActiveCategories(supabase),
@@ -53,7 +54,7 @@ export default async function ShopPage({
   }
 
   return (
-    <div>*
+    <div>
       <section className="w-full bg-surface py-8 sm:py-10">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 sm:px-8">
           <div>
@@ -117,7 +118,12 @@ export default async function ShopPage({
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
-        {products.length === 0 ? (
+        {productsError ? (
+          <div role="alert" className="mx-auto mt-10 max-w-xl rounded-xl border border-surface-dim bg-white p-6 text-center">
+            <p className="font-medium text-foreground">Products could not be loaded.</p>
+            <Link href="/shop" className="mt-4 inline-block text-sm font-semibold text-primary underline underline-offset-4">Try again</Link>
+          </div>
+        ) : products.length === 0 ? (
           <p className="mt-10 text-secondary">No products match your filters.</p>
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">

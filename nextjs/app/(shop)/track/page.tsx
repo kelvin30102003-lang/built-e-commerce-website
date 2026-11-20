@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/get-current-profile";
 import { formatDate, formatMmk } from "@/lib/shop/format";
 import { ORDER_STATUS_LABELS } from "@/lib/shop/constants";
 
@@ -19,18 +20,19 @@ export default async function TrackOrderPage({
 }) {
   const { orderNumber } = await searchParams;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect(`/login?redirect=${encodeURIComponent(orderNumber ? `/track?orderNumber=${orderNumber}` : "/track")}`);
 
   const normalizedOrderNumber = orderNumber?.trim();
-  const { data: order } = normalizedOrderNumber
+  const orderResult = normalizedOrderNumber
     ? await supabase
         .from("orders")
         .select("order_number, order_status, placed_at, total_amount, order_items(quantity), shipments(tracking_number, courier_name)")
         .eq("user_id", user.id)
         .eq("order_number", normalizedOrderNumber)
         .maybeSingle()
-    : { data: null };
+    : null;
+  const order = orderResult?.data ?? null;
 
   const isTerminal = order?.order_status === "cancelled" || order?.order_status === "refunded";
   const activeStep = order ? TRACKING_STEPS.findIndex((step) => step.status === order.order_status) : -1;
@@ -64,7 +66,13 @@ export default async function TrackOrderPage({
         </button>
       </form>
 
-      {normalizedOrderNumber && !order && (
+      {normalizedOrderNumber && orderResult?.error && (
+        <p role="alert" className="mx-auto mt-5 max-w-xl rounded-lg bg-surface-low p-4 text-sm text-secondary">
+          We could not load this order. Please refresh and try again.
+        </p>
+      )}
+
+      {normalizedOrderNumber && !order && !orderResult?.error && (
         <p role="status" className="mx-auto mt-5 max-w-xl rounded-lg bg-surface-low p-4 text-sm text-secondary">
           We couldn’t find that order in your account. Check the order number and try again.
         </p>

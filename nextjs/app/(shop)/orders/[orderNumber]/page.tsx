@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/get-current-profile";
 import { formatMmk, formatDateTime } from "@/lib/shop/format";
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, SHIPPING_STATUS_LABELS } from "@/lib/shop/constants";
 
@@ -10,10 +11,10 @@ export default async function OrderDetailPage({
 }) {
   const { orderNumber } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect(`/login?redirect=/orders/${orderNumber}`);
 
-  const { data: order } = await supabase
+  const { data: order, error } = await supabase
     .from("orders")
     .select(
       `id, order_number, subtotal, shipping_fee, total_amount, order_status, payment_status, shipping_status,
@@ -23,7 +24,9 @@ export default async function OrderDetailPage({
     )
     .eq("order_number", orderNumber)
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (error) throw new Error("Could not load this order. Please try again.");
 
   if (!order) notFound();
 

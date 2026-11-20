@@ -19,7 +19,6 @@ const categorySchema = z.object({
   parent_id: z.string().optional(),
   is_active: z.string().optional(),
   sort_order: z.string().optional(),
-  is_color_filter_category: z.string().optional(),
 });
 
 export async function createCategoryAction(formData: FormData) {
@@ -28,7 +27,7 @@ export async function createCategoryAction(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { name, description, parent_id, is_active, sort_order, is_color_filter_category } = parsed.data;
+  const { name, description, parent_id, is_active, sort_order } = parsed.data;
 
   const supabase = await createClient();
   const { error } = await supabase.from("categories").insert({
@@ -37,7 +36,6 @@ export async function createCategoryAction(formData: FormData) {
     description: description || null,
     parent_id: parent_id ? Number(parent_id) : null,
     is_active: is_active === "on",
-    is_color_filter_category: is_color_filter_category === "on",
     sort_order: sort_order ? Number(sort_order) : 0,
   });
 
@@ -53,7 +51,7 @@ export async function updateCategoryAction(id: number, formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { name, description, parent_id, is_active, sort_order, is_color_filter_category } = parsed.data;
+  const { name, description, parent_id, is_active, sort_order } = parsed.data;
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -64,7 +62,6 @@ export async function updateCategoryAction(id: number, formData: FormData) {
       description: description || null,
       parent_id: parent_id ? Number(parent_id) : null,
       is_active: is_active === "on",
-      is_color_filter_category: is_color_filter_category === "on",
       sort_order: sort_order ? Number(sort_order) : 0,
     })
     .eq("id", id);

@@ -8,7 +8,7 @@ export default async function AdminCategoriesPage() {
   const supabase = await createClient();
   const { data: categories, error } = await supabase
     .from("categories")
-    .select("id, name, description, parent_id, is_active, sort_order, is_color_filter_category")
+    .select("id, name, description, parent_id, is_active, sort_order")
     .order("sort_order", { ascending: true });
   if (error) return <ErrorMessage error={error} />;
 

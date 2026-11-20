@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { updateCartItemAction, removeCartItemAction } from "@/lib/actions/cart";
 
 export function CartLineControls({
@@ -13,31 +13,36 @@ export function CartLineControls({
   maxQuantity: number;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [message, setMessage] = useState<string | null>(null);
 
   function updateQuantity(nextQuantity: number) {
+    setMessage(null);
     const formData = new FormData();
     formData.set("cartItemId", String(cartItemId));
     formData.set("quantity", String(nextQuantity));
     startTransition(async () => {
-      await updateCartItemAction(formData);
+      const result = await updateCartItemAction(formData);
+      if (result.error) setMessage(result.error);
     });
   }
 
   function removeItem() {
+    setMessage(null);
     const formData = new FormData();
     formData.set("cartItemId", String(cartItemId));
     startTransition(async () => {
-      await removeCartItemAction(formData);
+      const result = await removeCartItemAction(formData);
+      if (result.error) setMessage(result.error);
     });
   }
 
   return (
-    <div className="mt-2 flex items-center gap-4 text-sm">
-      <div className="inline-flex items-center bg-surface-lowest shadow-sm">
+    <div className="mt-2 flex flex-wrap items-center gap-4 text-sm">
+      {maxQuantity > 0 ? <div className="inline-flex items-center bg-surface-lowest shadow-sm">
         <button
           type="button"
           disabled={isPending}
-          onClick={() => quantity <= 1 ? removeItem() : updateQuantity(quantity - 1)}
+          onClick={() => quantity <= 1 ? removeItem() : updateQuantity(Math.min(quantity - 1, maxQuantity))}
           className="flex h-9 w-9 items-center justify-center text-primary transition-colors hover:bg-surface-high disabled:opacity-40"
           aria-label={quantity <= 1 ? "Remove item from cart" : "Decrease quantity"}
         >
@@ -53,7 +58,7 @@ export function CartLineControls({
         >
           +
         </button>
-      </div>
+      </div> : <span className="text-xs font-medium text-error">Out of stock</span>}
       <button
         type="button"
         disabled={isPending}
@@ -66,6 +71,7 @@ export function CartLineControls({
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2m-10 0 1 14h10l1-14M10 10v6m4-6v6" />
         </svg>
       </button>
+      {message ? <span role="alert" className="w-full text-xs text-error">{message}</span> : null}
     </div>
   );
 }

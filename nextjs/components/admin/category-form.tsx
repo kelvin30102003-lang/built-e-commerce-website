@@ -10,7 +10,6 @@ type Category = {
   description: string | null;
   parent_id: number | null;
   is_active: boolean;
-  is_color_filter_category: boolean;
   sort_order: number;
 };
 
@@ -98,17 +97,6 @@ export function CategoryForm({
         />
         <label htmlFor="is_active" className="text-sm">
           Active
-        </label>
-      </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          name="is_color_filter_category"
-          id="is_color_filter_category"
-          defaultChecked={category?.is_color_filter_category ?? false}
-        />
-        <label htmlFor="is_color_filter_category" className="text-sm">
-          Show Shop by Color for products in this category
         </label>
       </div>
       {error && <p className="text-sm text-red-500">{error}</p>}

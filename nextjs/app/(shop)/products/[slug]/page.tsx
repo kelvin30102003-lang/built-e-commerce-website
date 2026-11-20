@@ -20,13 +20,7 @@ export default async function ProductDetailPage({
     (a, b) => a.sort_order - b.sort_order
   );
   const variants = (product.product_variants ?? []).filter((v) => v.is_active);
-  const approvedReviews = (product.reviews ?? []).filter(
-    (r) => r.status === "approved"
-  );
-  const avgRating = approvedReviews.length
-    ? approvedReviews.reduce((sum, r) => sum + r.rating, 0) /
-      approvedReviews.length
-    : null;
+  const recentReviews = product.reviews ?? [];
 
   return (
     <section className="w-full max-w-5xl mx-auto px-4 sm:px-6 pb-12 pt-4">
@@ -54,12 +48,6 @@ export default async function ProductDetailPage({
             <h1 className="text-4xl lg:text-5xl font-bold text-foreground tracking-tight leading-snug ">
       {product.name}
     </h1>
-            {avgRating !== null && (
-              <p className="text-sm text-secondary">
-                ⭐ {avgRating.toFixed(1)} ({approvedReviews.length}{" "}
-                {approvedReviews.length === 1 ? "review" : "reviews"})
-              </p>
-            )}
           </div>
 
           
@@ -127,13 +115,11 @@ export default async function ProductDetailPage({
       </div>
 
       {/* ── Reviews Section ── */}
-      {approvedReviews.length > 0 && (
+      {recentReviews.length > 0 && (
         <section className="mt-12 border-t border-outline-variant/60 pt-8">
-          <h2 className="text-2xl font-medium uppercase tracking-tight text-foreground">
-            Reviews
-          </h2>
+          <h2 className="text-2xl font-medium uppercase tracking-tight text-foreground">Recent reviews</h2>
           <div className="mt-4 space-y-4">
-            {approvedReviews.map((review) => {
+            {recentReviews.map((review) => {
               const reviewer = review.profiles as unknown as {
                 full_name: string | null;
               } | null;

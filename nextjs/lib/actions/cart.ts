@@ -31,7 +31,16 @@ export async function addToCartAction(formData: FormData) {
     user = data.user;
   }
 
-  await addCartItem(supabase, user.id, parsed.data.productId, parsed.data.variantId, parsed.data.quantity);
+  try {
+    await addCartItem(supabase, parsed.data.productId, parsed.data.variantId, parsed.data.quantity);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    return {
+      error: message.includes("stock") || message.includes("available")
+        ? message
+        : "Could not add this item to your cart. Please try again.",
+    };
+  }
   revalidatePath("/cart");
   revalidatePath("/", "layout");
   return { error: null };
@@ -53,7 +62,12 @@ export async function updateCartItemAction(formData: FormData) {
   });
   if (!parsed.success) return { error: "Invalid quantity." };
 
-  await updateCartItemQuantity(supabase, parsed.data.cartItemId, parsed.data.quantity);
+  try {
+    await updateCartItemQuantity(supabase, parsed.data.cartItemId, parsed.data.quantity);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    return { error: message.includes("stock") || message.includes("available") ? message : "Could not update your cart." };
+  }
   revalidatePath("/cart");
   revalidatePath("/", "layout");
   return { error: null };
@@ -69,7 +83,11 @@ export async function removeCartItemAction(formData: FormData) {
   const parsed = removeSchema.safeParse({ cartItemId: formData.get("cartItemId") });
   if (!parsed.success) return { error: "Invalid request." };
 
-  await removeCartItem(supabase, parsed.data.cartItemId);
+  try {
+    await removeCartItem(supabase, parsed.data.cartItemId);
+  } catch {
+    return { error: "Could not remove this item. Please refresh and try again." };
+  }
   revalidatePath("/cart");
   revalidatePath("/", "layout");
   return { error: null };

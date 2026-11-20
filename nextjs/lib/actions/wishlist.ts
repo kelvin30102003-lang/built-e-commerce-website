@@ -15,7 +15,7 @@ export async function setWishlistItemAction(productId: number, shouldAdd: boolea
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Please log in to save products to your wishlist." };
+  if (!user || user.is_anonymous) return { error: "Please log in to save products to your wishlist." };
 
   if (shouldAdd) {
     const { data: product } = await supabase

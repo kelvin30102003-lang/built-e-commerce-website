@@ -1,8 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { fetchCartDetails } from "@/lib/shop/cart";
+import { fetchCartItemCount } from "@/lib/shop/cart";
 import { CartBadge } from "@/components/shop/cart-badge";
 import { HeartIcon, UserIcon } from "@/components/shop/icons";
 
@@ -13,14 +12,17 @@ const NAV_LINKS = [
   { href: "/contact", label: "Contact " },
 ];
 
-export async function SiteHeader() {
-  const { user, profile } = await getCurrentProfile();
-
+export async function SiteHeader({
+  user,
+  profile,
+}: {
+  user: { id: string } | null;
+  profile: { role: string; avatar_url: string | null } | null;
+}) {
   let itemCount = 0;
   if (user) {
     const supabase = await createClient();
-    const cart = await fetchCartDetails(supabase, user.id);
-    itemCount = cart.itemCount;
+    itemCount = await fetchCartItemCount(supabase, user.id);
   }
 
   return (

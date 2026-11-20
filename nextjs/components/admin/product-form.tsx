@@ -16,6 +16,8 @@ type Product = {
   status: string;
 };
 
+const inputClass = "mt-1 block w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-neutral-500 focus:ring-2 focus:ring-neutral-100";
+
 export function ProductForm({
   product,
   categories,
@@ -31,55 +33,67 @@ export function ProductForm({
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
-      const result = product
-        ? await updateProductAction(product.id, formData)
-        : await createProductAction(formData);
-      if (result?.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = product
+          ? await updateProductAction(product.id, formData)
+          : await createProductAction(formData);
+        if (result?.error) {
+          setError(result.error);
+          return;
+        }
+        setError(null);
+        if (!product && "productId" in result && result.productId) {
+          router.push(`/admin/products/${result.productId}`);
+          return;
+        }
+        router.refresh();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Could not save the product. Please try again.");
       }
-      setError(null);
-      router.refresh();
     });
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4 rounded-xl border border-pink-100 bg-white p-5">
+    <form action={handleSubmit} className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-7">
       <div>
-        <label className="text-sm font-medium">Name</label>
+        <label htmlFor="product-name" className="text-sm font-medium text-slate-800">Name</label>
         <input
+          id="product-name"
           type="text"
           name="name"
           defaultValue={product?.name}
           required
-          className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
+          className={inputClass}
         />
       </div>
       <div>
-        <label className="text-sm font-medium">Short Description</label>
+        <label htmlFor="product-short-description" className="text-sm font-medium text-slate-800">Short description</label>
         <input
+          id="product-short-description"
           type="text"
           name="short_description"
           defaultValue={product?.short_description ?? ""}
-          className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
+          className={inputClass}
         />
       </div>
       <div>
-        <label className="text-sm font-medium">Description</label>
+        <label htmlFor="product-description" className="text-sm font-medium text-slate-800">Description</label>
         <textarea
+          id="product-description"
           name="description"
           defaultValue={product?.description ?? ""}
           rows={4}
-          className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
+          className={inputClass}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium">Category</label>
+          <label htmlFor="product-category" className="text-sm font-medium text-slate-800">Category</label>
           <select
+            id="product-category"
             name="category_id"
             defaultValue={product?.category_id ?? ""}
-            className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
+            className={inputClass}
           >
             <option value="">None</option>
             {categories.map((c) => (
@@ -90,11 +104,12 @@ export function ProductForm({
           </select>
         </div>
         <div>
-          <label className="text-sm font-medium">Brand</label>
+          <label htmlFor="product-brand" className="text-sm font-medium text-slate-800">Brand</label>
           <select
+            id="product-brand"
             name="brand_id"
             defaultValue={product?.brand_id ?? ""}
-            className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
+            className={inputClass}
           >
             <option value="">None</option>
             {brands.map((b) => (
@@ -106,11 +121,12 @@ export function ProductForm({
         </div>
       </div>
       <div>
-        <label className="text-sm font-medium">Status</label>
+        <label htmlFor="product-status" className="text-sm font-medium text-slate-800">Status</label>
         <select
+          id="product-status"
           name="status"
           defaultValue={product?.status ?? "draft"}
-          className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
+          className={inputClass}
         >
           <option value="draft">Draft</option>
           <option value="active">Active</option>
@@ -122,7 +138,7 @@ export function ProductForm({
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        className="rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-wait disabled:opacity-50"
       >
         {isPending ? "Saving..." : product ? "Save Changes" : "Create Product"}
       </button>

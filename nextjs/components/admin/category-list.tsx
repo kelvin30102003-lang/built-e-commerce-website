@@ -11,7 +11,6 @@ type Category = {
   description: string | null;
   parent_id: number | null;
   is_active: boolean;
-  is_color_filter_category: boolean;
   sort_order: number;
 };
 
@@ -45,7 +44,6 @@ export function CategoryList({ categories }: { categories: Category[] }) {
               <th className="px-4 py-2">Name</th>
               <th className="px-4 py-2">Parent</th>
               <th className="px-4 py-2">Sort</th>
-              <th className="px-4 py-2">Shop by color</th>
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2"></th>
             </tr>
@@ -54,7 +52,7 @@ export function CategoryList({ categories }: { categories: Category[] }) {
             {categories.map((category) =>
               editing !== "new" && editing?.id === category.id ? (
                 <tr key={category.id}>
-                  <td colSpan={6} className="p-2">
+                  <td colSpan={5} className="p-2">
                     <CategoryForm
                       category={category}
                       categories={categories}
@@ -69,9 +67,6 @@ export function CategoryList({ categories }: { categories: Category[] }) {
                     {categories.find((c) => c.id === category.parent_id)?.name ?? "—"}
                   </td>
                   <td className="px-4 py-2 text-slate-500">{category.sort_order}</td>
-                  <td className="px-4 py-2 text-slate-500">
-                    {category.is_color_filter_category ? "Enabled" : "—"}
-                  </td>
                   <td className="px-4 py-2">
                     <span
                       className={

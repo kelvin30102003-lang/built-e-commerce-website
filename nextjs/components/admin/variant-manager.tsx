@@ -9,8 +9,6 @@ type Variant = {
   id: number;
   sku: string;
   variant_name: string | null;
-  color_id: number | null;
-  color: { name: string } | null;
   price: number;
   compare_price: number | null;
   stock_quantity: number;
@@ -21,14 +19,10 @@ type Variant = {
 function VariantForm({
   productId,
   variant,
-  colors,
-  requiresColor,
   onDone,
 }: {
   productId: number;
   variant?: Variant;
-  colors: { id: number; name: string }[];
-  requiresColor: boolean;
   onDone: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -68,19 +62,6 @@ function VariantForm({
           defaultValue={variant?.variant_name ?? ""}
           className="mt-1 block w-full rounded-lg border border-pink-200 px-2 py-1.5 text-sm"
         />
-      </div>
-      <div>
-        <label className="text-xs font-medium">{requiresColor ? "Lens Color" : "Color"}</label>
-        <select
-          name="color_id"
-          defaultValue={variant?.color_id ?? ""}
-          required={requiresColor}
-          className="mt-1 block w-full rounded-lg border border-pink-200 px-2 py-1.5 text-sm"
-        >
-          {!requiresColor && <option value="">No color</option>}
-          {requiresColor && <option value="">Choose color</option>}
-          {colors.map((color) => <option key={color.id} value={color.id}>{color.name}</option>)}
-        </select>
       </div>
       <div>
         <label className="text-xs font-medium">Price (Ks)</label>
@@ -146,7 +127,7 @@ function VariantForm({
   );
 }
 
-export function VariantManager({ productId, variants, colors, requiresColor }: { productId: number; variants: Variant[]; colors: { id: number; name: string }[]; requiresColor: boolean }) {
+export function VariantManager({ productId, variants }: { productId: number; variants: Variant[] }) {
   const [editing, setEditing] = useState<Variant | "new" | null>(null);
   const router = useRouter();
 
@@ -160,14 +141,14 @@ export function VariantManager({ productId, variants, colors, requiresColor }: {
     <div className="space-y-3">
       {variants.map((variant) =>
         editing !== "new" && editing?.id === variant.id ? (
-          <VariantForm key={variant.id} productId={productId} variant={variant} colors={colors} requiresColor={requiresColor} onDone={() => setEditing(null)} />
+          <VariantForm key={variant.id} productId={productId} variant={variant} onDone={() => setEditing(null)} />
         ) : (
           <div
             key={variant.id}
             className="flex items-center justify-between rounded-lg border border-pink-100 px-3 py-2 text-sm"
           >
             <div>
-              <p className="font-medium text-slate-800">{variant.color?.name ? `${variant.color.name} · ` : ""}{variant.variant_name ?? variant.sku}</p>
+              <p className="font-medium text-slate-800">{variant.variant_name ?? variant.sku}</p>
               <p className="text-slate-500">{variant.sku}</p>
             </div>
             <div className="text-right">
@@ -189,7 +170,7 @@ export function VariantManager({ productId, variants, colors, requiresColor }: {
       )}
 
       {editing === "new" ? (
-        <VariantForm productId={productId} colors={colors} requiresColor={requiresColor} onDone={() => setEditing(null)} />
+        <VariantForm productId={productId} onDone={() => setEditing(null)} />
       ) : (
         <button
           onClick={() => setEditing("new")}

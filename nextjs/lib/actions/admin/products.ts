@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -54,10 +53,18 @@ export async function createProductAction(formData: FormData) {
     .select("id")
     .single();
 
-  if (error || !data) return { error: error?.message ?? "Failed to create product" };
+  if (error || !data) {
+    // A product slug is unique. Give admins a direct fix for the common case
+    // where they try to create a second product with the same name.
+    if (error?.code === "23505") {
+      return { error: "A product with this name already exists. Change the product name and try again." };
+    }
+    return { error: error?.message ?? "Failed to create product" };
+  }
 
   revalidatePath("/admin/products");
-  redirect(`/admin/products/${data.id}`);
+  revalidatePath(`/admin/products/${data.id}`);
+  return { success: true, productId: data.id };
 }
 
 export async function updateProductAction(id: number, formData: FormData) {
@@ -102,7 +109,6 @@ export async function deleteProductAction(id: number) {
 const variantSchema = z.object({
   sku: z.string().trim().min(1, "SKU is required").max(80),
   variant_name: z.string().trim().max(120).optional(),
-  color_id: z.string().optional(),
   price: z.coerce.number().min(0),
   compare_price: z.string().optional(),
   stock_quantity: z.coerce.number().int().min(0),
@@ -116,17 +122,14 @@ export async function createVariantAction(productId: number, formData: FormData)
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { sku, variant_name, color_id, price, compare_price, stock_quantity, low_stock_threshold, is_active } =
+  const { sku, variant_name, price, compare_price, stock_quantity, low_stock_threshold, is_active } =
     parsed.data;
 
   const supabase = await createClient();
-  const colorResult = await validateVariantColor(supabase, productId, color_id);
-  if (colorResult.error) return colorResult;
   const { error } = await supabase.from("product_variants").insert({
     product_id: productId,
     sku,
     variant_name: variant_name || null,
-    color_id: color_id ? Number(color_id) : null,
     price,
     compare_price: compare_price ? Number(compare_price) : null,
     stock_quantity,
@@ -146,18 +149,15 @@ export async function updateVariantAction(id: number, productId: number, formDat
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { sku, variant_name, color_id, price, compare_price, stock_quantity, low_stock_threshold, is_active } =
+  const { sku, variant_name, price, compare_price, stock_quantity, low_stock_threshold, is_active } =
     parsed.data;
 
   const supabase = await createClient();
-  const colorResult = await validateVariantColor(supabase, productId, color_id);
-  if (colorResult.error) return colorResult;
   const { error } = await supabase
     .from("product_variants")
     .update({
       sku,
       variant_name: variant_name || null,
-      color_id: color_id ? Number(color_id) : null,
       price,
       compare_price: compare_price ? Number(compare_price) : null,
       stock_quantity,
@@ -170,41 +170,6 @@ export async function updateVariantAction(id: number, productId: number, formDat
 
   revalidatePath(`/admin/products/${productId}`);
   return { success: true };
-}
-
-async function validateVariantColor(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  productId: number,
-  colorId: string | undefined,
-) {
-  const { data: product } = await supabase
-    .from("products")
-    .select("category_id")
-    .eq("id", productId)
-    .single();
-  const { data: category } = product?.category_id
-    ? await supabase.from("categories").select("is_color_filter_category").eq("id", product.category_id).single()
-    : { data: null };
-
-  if (category?.is_color_filter_category && !colorId) {
-    return { error: "Choose a color for this product variant." };
-  }
-  if (!category?.is_color_filter_category && colorId) {
-    return { error: "Colors can only be assigned to products in a color filter category." };
-  }
-  if (colorId && !/^\d+$/.test(colorId)) {
-    return { error: "Choose a valid color." };
-  }
-  if (colorId) {
-    const { data: color } = await supabase
-      .from("product_colors")
-      .select("id")
-      .eq("id", Number(colorId))
-      .eq("is_active", true)
-      .maybeSingle();
-    if (!color) return { error: "That color is inactive or no longer available." };
-  }
-  return { error: null };
 }
 
 export async function deleteVariantAction(id: number, productId: number) {

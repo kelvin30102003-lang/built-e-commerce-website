@@ -12,18 +12,18 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   const productId = Number(id);
   const supabase = await createClient();
 
-  const [{ data: product, error: productError }, { data: categories, error: categoriesError }, { data: brands, error: brandsError }, { data: variants, error: variantsError }, { data: images, error: imagesError }, { data: colors, error: colorsError }] =
+  const [{ data: product, error: productError }, { data: categories, error: categoriesError }, { data: brands, error: brandsError }, { data: variants, error: variantsError }, { data: images, error: imagesError }] =
     await Promise.all([
       supabase
         .from("products")
         .select("id, name, short_description, description, category_id, brand_id, status")
         .eq("id", productId)
         .maybeSingle(),
-      supabase.from("categories").select("id, name, is_color_filter_category").order("name"),
+      supabase.from("categories").select("id, name").order("name"),
       supabase.from("brands").select("id, name").order("name"),
       supabase
         .from("product_variants")
-        .select("id, sku, variant_name, color_id, color:product_colors(name), price, compare_price, stock_quantity, low_stock_threshold, is_active")
+        .select("id, sku, variant_name, price, compare_price, stock_quantity, low_stock_threshold, is_active")
         .eq("product_id", productId)
         .order("id"),
       supabase
@@ -31,10 +31,9 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         .select("id, image_url, sort_order")
         .eq("product_id", productId)
         .order("sort_order"),
-      supabase.from("product_colors").select("id, name").order("sort_order"),
     ]);
 
-  const queryError = productError ?? categoriesError ?? brandsError ?? variantsError ?? imagesError ?? colorsError;
+  const queryError = productError ?? categoriesError ?? brandsError ?? variantsError ?? imagesError;
   if (queryError) return <ErrorMessage error={queryError} />;
 
   if (!product) notFound();
@@ -68,8 +67,6 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         <VariantManager
           productId={productId}
           variants={variants ?? []}
-          colors={colors ?? []}
-          requiresColor={categories?.find((category) => category.id === product.category_id)?.is_color_filter_category ?? false}
         />
       </div>
     </div>

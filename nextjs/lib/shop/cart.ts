@@ -3,6 +3,22 @@ import type { Database } from "@/lib/types/database";
 
 const MAX_QUANTITY = 99;
 
+export async function fetchCartItemCount(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<number> {
+  const { data: rows, error } = await supabase
+    .from("cart_items")
+    .select("quantity, carts!inner(user_id)")
+    .eq("carts.user_id", userId);
+
+  if (error) {
+    console.error("Could not load cart count:", error.message);
+    return 0;
+  }
+  return (rows ?? []).reduce((total, row) => total + row.quantity, 0);
+}
+
 export interface CartLine {
   id: number;
   productId: number;
@@ -15,6 +31,7 @@ export interface CartLine {
   unitPrice: number;
   lineTotal: number;
   stockQuantity: number;
+  isAvailable: boolean;
 }
 
 export interface CartDetails {
@@ -23,54 +40,23 @@ export interface CartDetails {
   itemCount: number;
 }
 
-export async function getOrCreateCartId(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-): Promise<number> {
-  const { data: existing } = await supabase
-    .from("carts")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (existing) return existing.id;
-
-  const { data: created, error } = await supabase
-    .from("carts")
-    .insert({ user_id: userId })
-    .select("id")
-    .single();
-
-  if (error) throw error;
-  return created.id;
-}
-
 export async function fetchCartDetails(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<CartDetails> {
-  const { data: cart } = await supabase
-    .from("carts")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (!cart) {
-    return { items: [], subtotal: 0, itemCount: 0 };
-  }
-
   const { data: rows, error } = await supabase
     .from("cart_items")
     .select(
       `id, quantity, product_id, product_variant_id,
+       carts!inner(user_id),
        products(name, slug, product_images(image_url, sort_order)),
        product_variants(price, variant_name, stock_quantity, is_active)`,
     )
-    .eq("cart_id", cart.id);
+    .eq("carts.user_id", userId);
 
   if (error) {
     console.error("Could not load cart items:", error);
-    return { items: [], subtotal: 0, itemCount: 0 };
+    throw new Error("Could not load your cart items.");
   }
 
   const items: CartLine[] = [];
@@ -87,23 +73,23 @@ export async function fetchCartDetails(
       product_images: { image_url: string; sort_order: number }[];
     } | null;
 
-    if (!product || !variant || !variant.is_active) continue;
-
-    const images = [...(product.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order);
-    const quantity = Math.min(row.quantity, Math.max(variant.stock_quantity, 0) || row.quantity, MAX_QUANTITY);
+    const images = [...(product?.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+    const quantity = Math.min(row.quantity, MAX_QUANTITY);
+    const isAvailable = Boolean(product && variant?.is_active);
 
     items.push({
       id: row.id,
       productId: row.product_id,
       variantId: row.product_variant_id,
-      productName: product.name,
-      variantName: variant.variant_name,
-      slug: product.slug,
+      productName: product?.name ?? "Unavailable product",
+      variantName: variant?.variant_name ?? null,
+      slug: product?.slug ?? "",
       imageUrl: images[0]?.image_url ?? null,
       quantity,
-      unitPrice: variant.price,
-      lineTotal: variant.price * quantity,
-      stockQuantity: variant.stock_quantity,
+      unitPrice: variant?.price ?? 0,
+      lineTotal: (variant?.price ?? 0) * quantity,
+      stockQuantity: isAvailable ? variant?.stock_quantity ?? 0 : 0,
+      isAvailable,
     });
   }
 
@@ -115,36 +101,14 @@ export async function fetchCartDetails(
 
 export async function addCartItem(
   supabase: SupabaseClient<Database>,
-  userId: string,
   productId: number,
   variantId: number,
   quantity: number,
 ) {
-  const cartId = await getOrCreateCartId(supabase, userId);
-
-  const { data: existing } = await supabase
-    .from("cart_items")
-    .select("id, quantity")
-    .eq("cart_id", cartId)
-    .eq("product_id", productId)
-    .eq("product_variant_id", variantId)
-    .maybeSingle();
-
-  if (existing) {
-    const nextQuantity = Math.min(existing.quantity + quantity, MAX_QUANTITY);
-    const { error } = await supabase
-      .from("cart_items")
-      .update({ quantity: nextQuantity })
-      .eq("id", existing.id);
-    if (error) throw error;
-    return;
-  }
-
-  const { error } = await supabase.from("cart_items").insert({
-    cart_id: cartId,
-    product_id: productId,
-    product_variant_id: variantId,
-    quantity: Math.min(Math.max(quantity, 1), MAX_QUANTITY),
+  const { error } = await supabase.rpc("add_cart_item", {
+    p_product_id: productId,
+    p_variant_id: variantId,
+    p_quantity: Math.min(Math.max(quantity, 1), MAX_QUANTITY),
   });
   if (error) throw error;
 }
@@ -155,25 +119,14 @@ export async function updateCartItemQuantity(
   quantity: number,
 ) {
   const clamped = Math.min(Math.max(quantity, 1), MAX_QUANTITY);
-  const { error } = await supabase
-    .from("cart_items")
-    .update({ quantity: clamped })
-    .eq("id", cartItemId);
+  const { error } = await supabase.rpc("update_cart_item_quantity", {
+    p_cart_item_id: cartItemId,
+    p_quantity: clamped,
+  });
   if (error) throw error;
 }
 
 export async function removeCartItem(supabase: SupabaseClient<Database>, cartItemId: number) {
-  const { error } = await supabase.from("cart_items").delete().eq("id", cartItemId);
-  if (error) throw error;
-}
-
-export async function clearCart(supabase: SupabaseClient<Database>, userId: string) {
-  const { data: cart } = await supabase
-    .from("carts")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!cart) return;
-  const { error } = await supabase.from("cart_items").delete().eq("cart_id", cart.id);
+  const { error } = await supabase.rpc("remove_cart_item", { p_cart_item_id: cartItemId });
   if (error) throw error;
 }

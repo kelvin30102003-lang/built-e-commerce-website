@@ -104,7 +104,6 @@ export interface Database {
           description: string | null;
           image_url: string | null;
           is_active: boolean;
-          is_color_filter_category: boolean;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -134,25 +133,6 @@ export interface Database {
         };
         Insert: Partial<Database["public"]["Tables"]["brands"]["Row"]> & { name: string; slug: string };
         Update: Partial<Database["public"]["Tables"]["brands"]["Row"]>;
-        Relationships: [];
-      };
-      product_colors: {
-        Row: {
-          id: number;
-          name: string;
-          slug: string;
-          image_url: string | null;
-          hex_value: string;
-          is_active: boolean;
-          sort_order: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: Partial<Database["public"]["Tables"]["product_colors"]["Row"]> & {
-          name: string;
-          slug: string;
-        };
-        Update: Partial<Database["public"]["Tables"]["product_colors"]["Row"]>;
         Relationships: [];
       };
       products: {
@@ -194,7 +174,6 @@ export interface Database {
           product_id: number;
           sku: string;
           variant_name: string | null;
-          color_id: number | null;
           price: number;
           compare_price: number | null;
           stock_quantity: number;
@@ -215,13 +194,6 @@ export interface Database {
             columns: ["product_id"];
             isOneToOne: false;
             referencedRelation: "products";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "product_variants_color_id_fkey";
-            columns: ["color_id"];
-            isOneToOne: false;
-            referencedRelation: "product_colors";
             referencedColumns: ["id"];
           },
         ];
@@ -646,6 +618,18 @@ export interface Database {
           p_status: string;
         };
         Returns: number;
+      };
+      add_cart_item: {
+        Args: { p_product_id: number; p_variant_id: number; p_quantity: number };
+        Returns: undefined;
+      };
+      update_cart_item_quantity: {
+        Args: { p_cart_item_id: number; p_quantity: number };
+        Returns: undefined;
+      };
+      remove_cart_item: {
+        Args: { p_cart_item_id: number };
+        Returns: undefined;
       };
       place_order: {
         Args: {

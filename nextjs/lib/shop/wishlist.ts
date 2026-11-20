@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database";
+import { getCurrentUser } from "@/lib/auth/get-current-profile";
 
 export async function fetchWishlistedProductIds(
   supabase: SupabaseClient<Database>,
@@ -7,8 +8,8 @@ export async function fetchWishlistedProductIds(
 ) {
   if (productIds.length === 0) return [];
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  const user = await getCurrentUser();
+  if (!user || user.is_anonymous) return [];
 
   const { data, error } = await supabase
     .from("wishlist_items")
