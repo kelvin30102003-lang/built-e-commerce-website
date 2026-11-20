@@ -42,7 +42,7 @@ export function SiteFooter() {
             <ul className="space-y-2 text-xs text-gray-300 ">
               <li>
                 <Link
-                  href="/services"
+                  href="/track"
                   className="flex items-center gap-1.5 transition-colors hover:text-white hover:underline"
                 >
                   <span className="text-[10px] text-gray-400">❤</span> Track Order
@@ -50,7 +50,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <Link
-                  href="/support"
+                  href="/orders"
                   className="flex items-center gap-1.5 transition-colors hover:text-white hover:underline"
                 >
                   <span className="text-[10px] text-gray-400">❤</span> Order History
@@ -58,7 +58,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <Link
-                  href="/terms"
+                  href="/contact"
                   className="flex items-center gap-1.5 transition-colors hover:text-white hover:underline"
                 >
                   <span className="text-[10px] text-gray-400">❤</span> Contact Us

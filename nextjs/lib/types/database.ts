@@ -596,6 +596,7 @@ export interface Database {
           support_email: string | null;
           support_phone: string | null;
           support_address: string | null;
+          opening_hours: string | null;
           is_active: boolean;
           created_at: string;
           updated_at: string;

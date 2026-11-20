@@ -22,6 +22,7 @@ export default async function OrderDetailPage({
        shipments(tracking_number, courier_name, status)`,
     )
     .eq("order_number", orderNumber)
+    .eq("user_id", user.id)
     .single();
 
   if (!order) notFound();

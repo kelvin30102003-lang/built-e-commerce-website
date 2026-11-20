@@ -32,6 +32,7 @@ const NAV_SECTIONS = [
     title: "Support",
     links: [
       { href: "/admin/users", label: "Users", adminOnly: true },
+      { href: "/admin/contact", label: "Contact Details", adminOnly: true },
       { href: "/admin/activity-logs", label: "Activity Log", capability: "reports" },
       { href: "/admin/profile", label: "My Profile" },
     ],
