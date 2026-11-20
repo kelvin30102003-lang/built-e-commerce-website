@@ -2,24 +2,33 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { requireStaffOrAdmin } from '@/lib/auth/require-admin';
 import { log_admin_activity } from '@/lib/supabase/rpc';
+import { z } from 'zod';
+
+const adminProfileSchema = z.object({
+  full_name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email().max(254),
+  password: z.union([z.literal(''), z.string().min(12).max(128)]),
+});
 
 /** Server action to update profile */
 export async function updateProfileAction(formData: FormData) {
   'use server';
   const { user } = await requireStaffOrAdmin();
   const supabase = await createClient();
-  const fullName = String(formData.get('full_name') ?? '');
-  const email = String(formData.get('email') ?? '');
-  const password = formData.get('password');
-
-  if (!fullName || !email) throw new Error('Full name and email are required');
+  const parsed = adminProfileSchema.safeParse({
+    full_name: formData.get('full_name'),
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
+  if (!parsed.success) throw new Error('Enter a valid name and email. New passwords must be at least 12 characters.');
+  const { full_name: fullName, email, password } = parsed.data;
 
   // Update auth email/password if changed
   if (email !== user.email) {
     const { error } = await supabase.auth.updateUser({ email });
     if (error) throw error;
   }
-  if (typeof password === 'string' && password.length > 0) {
+  if (password.length > 0) {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
   }

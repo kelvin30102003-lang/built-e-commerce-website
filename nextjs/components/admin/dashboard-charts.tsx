@@ -20,13 +20,14 @@ export function DashboardCharts({
   orderStatusCounts: { status: string; count: number }[];
 }) {
   const totalOrders = orderStatusCounts.reduce((sum, item) => sum + item.count, 0);
-  let accumulatedPercent = 0;
-  const donutSegments = orderStatusCounts.map((item) => {
-    const percent = totalOrders ? (item.count / totalOrders) * 100 : 0;
-    const segment = { ...item, percent, offset: accumulatedPercent };
-    accumulatedPercent += percent;
-    return segment;
-  });
+  const donutSegments = orderStatusCounts.reduce<{ status: string; count: number; percent: number; offset: number }[]>(
+    (segments, item) => {
+      const percent = totalOrders ? (item.count / totalOrders) * 100 : 0;
+      const previous = segments[segments.length - 1];
+      return [...segments, { ...item, percent, offset: previous ? previous.offset + previous.percent : 0 }];
+    },
+    [],
+  );
   const maxSales = Math.max(...salesByDay.map((day) => day.total), 0);
 
   return (

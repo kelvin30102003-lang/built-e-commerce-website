@@ -66,6 +66,7 @@ export async function createCouponAction(formData: FormData) {
 
 export async function updateCouponAction(id: number, formData: FormData) {
   await requireAdminCapability("coupons");
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid coupon." };
   const parsed = couponSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -96,6 +97,7 @@ export async function updateCouponAction(id: number, formData: FormData) {
 
 export async function deleteCouponAction(id: number) {
   await requireAdminCapability("coupons");
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid coupon." };
   const supabase = await createClient();
   const { error } = await supabase.from("coupons").delete().eq("id", id);
   if (error) return { error: error.message };

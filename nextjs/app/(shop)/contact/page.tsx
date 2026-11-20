@@ -39,7 +39,9 @@ export default async function ContactPage() {
       </header>
 
       <section aria-label="Shop contact information" className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
-        {contactItems.map(({ key, label, href }) => {
+        {contactItems.map((item) => {
+          const { key, label } = item;
+          const href = "href" in item ? item.href : null;
           const value = settings?.[key]?.trim();
           return (
             <article

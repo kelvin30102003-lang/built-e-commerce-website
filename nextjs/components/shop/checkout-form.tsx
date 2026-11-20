@@ -1,8 +1,9 @@
 
 "use client";
 
-import { useState, useTransition, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useState, useTransition, type ChangeEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { formatMmk } from "@/lib/shop/format";
 import {
   SHIPPING_METHODS,
@@ -52,6 +53,11 @@ export function CheckoutForm({
 
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!slipPreview) return;
+    return () => URL.revokeObjectURL(slipPreview);
+  }, [slipPreview]);
+
   const router = useRouter();
 
   const shippingFee = SHIPPING_METHODS[shippingMethod].fee;
@@ -98,8 +104,23 @@ export function CheckoutForm({
       return;
     }
 
+    if (file.size > 5 * 1024 * 1024) {
+      event.target.value = "";
+      setSlipPreview(null);
+      setError("Payment slip must be under 5 MB.");
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      event.target.value = "";
+      setSlipPreview(null);
+      setError("Choose a JPG, PNG, or WEBP payment slip.");
+      return;
+    }
+
     const previewUrl = URL.createObjectURL(file);
     setSlipPreview(previewUrl);
+    setError(null);
   }
 
   function removeSlip() {
@@ -270,9 +291,12 @@ export function CheckoutForm({
                       </p>
 
                       <div className="rounded-2xl border border-surface-dim bg-white p-4 shadow-sm">
-                        <img
+                        <Image
                           src={selectedMethod.qr_image_url}
                           alt={`${selectedMethod.name} QR Code`}
+                          width={256}
+                          height={256}
+                          unoptimized
                           className="h-56 w-56 object-contain sm:h-64 sm:w-64"
                         />
                       </div>
@@ -410,9 +434,12 @@ export function CheckoutForm({
                   <div className="overflow-hidden border border-surface-dim bg-surface-low">
                     {/* PREVIEW */}
                     <div className="relative">
-                      <img
+                      <Image
                         src={slipPreview}
                         alt="Payment screenshot preview"
+                        width={1200}
+                        height={800}
+                        unoptimized
                         className="max-h-[420px] w-full object-contain bg-black/5"
                       />
 

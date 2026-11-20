@@ -39,7 +39,8 @@ export default async function TrackOrderPage({
   const currentStep = order
     ? Math.max(activeStep, order.order_status === "processing" ? 2 : order.order_status === "shipped" ? 3 : 0)
     : -1;
-  const shipment = order && Array.isArray(order.shipments) ? order.shipments[0] : order?.shipments;
+  const shipment = (order && Array.isArray(order.shipments) ? order.shipments[0] : order?.shipments) as
+    { tracking_number: string | null; courier_name: string | null } | null | undefined;
   const itemCount = order?.order_items.reduce((total, item) => total + item.quantity, 0) ?? 0;
 
   return (

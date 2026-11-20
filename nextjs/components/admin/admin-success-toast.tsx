@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 export function AdminSuccessToast({
   message,
@@ -9,13 +9,10 @@ export function AdminSuccessToast({
   message: string;
   onDismiss?: () => void;
 }) {
-  const onDismissRef = useRef(onDismiss);
-  onDismissRef.current = onDismiss;
-
   useEffect(() => {
-    const timeout = window.setTimeout(() => onDismissRef.current?.(), 3000);
+    const timeout = window.setTimeout(() => onDismiss?.(), 3000);
     return () => window.clearTimeout(timeout);
-  }, [message]);
+  }, [message, onDismiss]);
 
   return (
     <div

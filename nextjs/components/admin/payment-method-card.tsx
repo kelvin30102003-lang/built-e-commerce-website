@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, type ChangeEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AdminSuccessToast } from "@/components/admin/admin-success-toast";
 import {
@@ -194,9 +195,12 @@ export function PaymentMethodCard({ method }: { method: PaymentMethod }) {
             {!qrPreview && method.qr_image_url ? (
               <div className="flex flex-col items-center gap-3">
                 <div className="rounded-2xl border border-surface-dim bg-white p-4 shadow-sm">
-                  <img
+                  <Image
                     src={method.qr_image_url}
                     alt={`${method.name} QR Code`}
+                    width={192}
+                    height={192}
+                    unoptimized
                     className="h-48 w-48 object-contain"
                   />
                 </div>
@@ -241,9 +245,12 @@ export function PaymentMethodCard({ method }: { method: PaymentMethod }) {
             {qrPreview && (
               <div className="flex flex-col items-center gap-3">
                 <div className="rounded-2xl border-2 border-dashed border-primary/40 bg-white p-4">
-                  <img
+                  <Image
                     src={qrPreview}
                     alt="New QR preview"
+                    width={192}
+                    height={192}
+                    unoptimized
                     className="h-48 w-48 object-contain"
                   />
                 </div>

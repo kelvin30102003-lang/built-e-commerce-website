@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { SHIPPING_METHODS, YANGON_TOWNSHIPS, isManualPaymentMethod, type ShippingMethodKey } from "@/lib/shop/constants";
 import { isValidImageFile } from "@/lib/security/image-validation";
+import { consumeActionRateLimit } from "@/lib/security/rate-limit";
 
 const checkoutSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
@@ -27,6 +28,9 @@ export async function placeOrderAction(formData: FormData) {
   if (!user) {
     if (requestedPaymentMethod !== "cod") {
       return { error: "Guest checkout is available with Cash on Delivery only.", orderNumber: null };
+    }
+    if (!(await consumeActionRateLimit("guest-session", "all", 60, 3600))) {
+      return { error: "Guest checkout is temporarily unavailable. Try again later.", orderNumber: null };
     }
     const { data, error } = await supabase.auth.signInAnonymously();
     if (error || !data.user) {

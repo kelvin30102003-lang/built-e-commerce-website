@@ -60,7 +60,7 @@ export async function fetchProducts(
   const sortColumn = SORT_COLUMN[sort];
   const ascending = sort === "name_asc";
 
-  const selectFields = `id, name, slug,
+  const selectFields = `id, name, slug, created_at,
        product_variants(id, price, compare_price, stock_quantity, is_active),
        product_images(id, image_url, sort_order)` as const;
 
@@ -165,18 +165,13 @@ export async function fetchProductBySlug(supabase: SupabaseClient<Database>, slu
        category:categories(id, name, slug),
        brand:brands(id, name, slug),
        product_variants(id, sku, variant_name, price, compare_price, stock_quantity, is_active),
-       product_images(id, image_url, sort_order),
-       reviews(id, rating, comment, status, created_at, user_id, profiles(full_name))`,
+       product_images(id, image_url, sort_order)`,
     )
     .eq("slug", slug)
     .eq("status", "active")
-    .eq("reviews.status", "approved")
     .order("sort_order", { referencedTable: "product_images", ascending: true })
     .order("id", { referencedTable: "product_images", ascending: true })
     .limit(12, { referencedTable: "product_images" })
-    .order("created_at", { referencedTable: "reviews", ascending: false })
-    .order("id", { referencedTable: "reviews", ascending: false })
-    .limit(20, { referencedTable: "reviews" })
     .maybeSingle();
 
   if (error) {

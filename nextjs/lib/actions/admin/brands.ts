@@ -43,6 +43,7 @@ export async function createBrandAction(formData: FormData) {
 
 export async function updateBrandAction(id: number, formData: FormData) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid brand." };
   const parsed = brandSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -68,6 +69,7 @@ export async function updateBrandAction(id: number, formData: FormData) {
 
 export async function deleteBrandAction(id: number) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid brand." };
   const supabase = await createClient();
   const { error } = await supabase.from("brands").delete().eq("id", id);
   if (error) return { error: error.message };

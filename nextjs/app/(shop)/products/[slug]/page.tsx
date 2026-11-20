@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchProductBySlug } from "@/lib/shop/queries";
-import { formatDate } from "@/lib/shop/format";
 import { AddToCartForm } from "@/components/shop/add-to-cart-form";
 import { ProductGallery } from "@/components/shop/product-gallery";
 
@@ -20,7 +19,6 @@ export default async function ProductDetailPage({
     (a, b) => a.sort_order - b.sort_order
   );
   const variants = (product.product_variants ?? []).filter((v) => v.is_active);
-  const recentReviews = product.reviews ?? [];
 
   return (
     <section className="w-full max-w-5xl mx-auto px-4 sm:px-6 pb-12 pt-4">
@@ -115,41 +113,6 @@ export default async function ProductDetailPage({
       </div>
 
       {/* ── Reviews Section ── */}
-      {recentReviews.length > 0 && (
-        <section className="mt-12 border-t border-outline-variant/60 pt-8">
-          <h2 className="text-2xl font-medium uppercase tracking-tight text-foreground">Recent reviews</h2>
-          <div className="mt-4 space-y-4">
-            {recentReviews.map((review) => {
-              const reviewer = review.profiles as unknown as {
-                full_name: string | null;
-              } | null;
-              return (
-                <div
-                  key={review.id}
-                  className="bg-surface-lowest p-4 shadow-sm border border-outline-variant/40"
-                >
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-foreground">
-                      {reviewer?.full_name ?? "Anonymous"}
-                    </span>
-                    <span className="text-secondary">
-                      {formatDate(review.created_at)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm">
-                    {"⭐".repeat(review.rating)}
-                  </p>
-                  {review.comment && (
-                    <p className="mt-2 text-sm text-on-surface-variant">
-                      {review.comment}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
     </section>
   );
 }

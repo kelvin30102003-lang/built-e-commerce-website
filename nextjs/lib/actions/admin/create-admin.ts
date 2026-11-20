@@ -6,6 +6,7 @@ import type { Database } from "@/lib/types/database";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { log_admin_activity } from "@/lib/supabase/rpc";
+import { consumeActionRateLimit } from "@/lib/security/rate-limit";
 
 export async function createAdminAccountAction(formData: FormData) {
   const { user: currentAdmin } = await requireAdmin();
@@ -21,11 +22,14 @@ export async function createAdminAccountAction(formData: FormData) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255) {
     return { error: "Enter a valid email address." };
   }
-  if (password.length < 8 || password.length > 128) {
-    return { error: "Password must be between 8 and 128 characters." };
+  if (password.length < 12 || password.length > 128) {
+    return { error: "Password must be between 12 and 128 characters." };
   }
-  if (!currentPassword) {
+  if (!currentPassword || currentPassword.length > 128) {
     return { error: "Enter your current admin password to confirm this action." };
+  }
+  if (!(await consumeActionRateLimit("create-admin", currentAdmin.id, 5, 3600))) {
+    return { error: "Too many admin account creation attempts. Try again later." };
   }
 
   try {

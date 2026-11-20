@@ -32,7 +32,6 @@ export function AddToCartForm({
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [isWishlisted, setIsWishlisted] = useState(false);
 
   const router = useRouter();
 
@@ -145,10 +144,6 @@ export function AddToCartForm({
             )}
         </div>
       )}
-      {selected?.color && (
-        <p className="text-sm text-secondary">Color: <span className="font-medium text-foreground">{selected.color.name}</span></p>
-      )}
-
       {/* =========================================================
           VARIANT
       ========================================================== */}

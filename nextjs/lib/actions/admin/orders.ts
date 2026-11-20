@@ -11,6 +11,7 @@ const orderStatusSchema = z.object({
 
 export async function updateOrderStatusAction(id: number, formData: FormData) {
   await requireAdminCapability("orders");
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid order." };
   const parsed = orderStatusSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };

@@ -69,6 +69,7 @@ export async function createProductAction(formData: FormData) {
 
 export async function updateProductAction(id: number, formData: FormData) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid product." };
   const parsed = productSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -98,6 +99,7 @@ export async function updateProductAction(id: number, formData: FormData) {
 
 export async function deleteProductAction(id: number) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid product." };
   const supabase = await createClient();
   const { error } = await supabase.from("products").delete().eq("id", id);
   if (error) return { error: error.message };
@@ -118,6 +120,7 @@ const variantSchema = z.object({
 
 export async function createVariantAction(productId: number, formData: FormData) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(productId) || productId <= 0) return { error: "Invalid product." };
   const parsed = variantSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -145,6 +148,9 @@ export async function createVariantAction(productId: number, formData: FormData)
 
 export async function updateVariantAction(id: number, productId: number, formData: FormData) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(productId) || productId <= 0) {
+    return { error: "Invalid product variant." };
+  }
   const parsed = variantSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -174,6 +180,9 @@ export async function updateVariantAction(id: number, productId: number, formDat
 
 export async function deleteVariantAction(id: number, productId: number) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(productId) || productId <= 0) {
+    return { error: "Invalid product variant." };
+  }
   const supabase = await createClient();
   const { error } = await supabase.from("product_variants").delete().eq("id", id);
   if (error) return { error: error.message };
@@ -184,7 +193,9 @@ export async function deleteVariantAction(id: number, productId: number) {
 
 export async function addProductImageAction(productId: number, formData: FormData) {
   await requireAdminCapability("products");
-  const file = formData.get("image") as File | null;
+  if (!Number.isSafeInteger(productId) || productId <= 0) return { error: "Invalid product." };
+  const selectedFile = formData.get("image");
+  const file = selectedFile instanceof File ? selectedFile : null;
   if (!file || file.size === 0 || file.size > 5 * 1024 * 1024) return { error: "Choose an image under 5 MB." };
   if (!(await isValidImageFile(file, ["image/jpeg", "image/png", "image/webp"]))) return { error: "The uploaded file is not a valid JPG, PNG, or WEBP image." };
 

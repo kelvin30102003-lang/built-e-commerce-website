@@ -62,7 +62,7 @@ export function LoginRegisterPanel({
       {/* Form area */}
       <div className="w-full">
         {mode === "login" ? (
-          <SignInForm registered={registered} redirectTo={redirectTo} />
+          <SignInForm redirectTo={redirectTo} />
         ) : (
           <CreateAccountForm redirectTo={redirectTo} />
         )}
@@ -92,7 +92,7 @@ function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
 
 /* ─────────────────────────── Sign In Form ─────────────────────────── */
 
-function SignInForm({ registered, redirectTo }: { registered: boolean; redirectTo: string }) {
+function SignInForm({ redirectTo }: { redirectTo: string }) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);

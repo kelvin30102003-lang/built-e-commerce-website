@@ -44,8 +44,8 @@ export function CreateAdminForm() {
       </div>
       <div>
         <label htmlFor="password" className="block text-sm font-medium text-foreground">Temporary password</label>
-        <input id="password" name="password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} className={inputClass} />
-        <p className="mt-1 text-xs text-secondary">At least 8 characters. Share it securely with the new admin.</p>
+        <input id="password" name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={128} className={inputClass} />
+        <p className="mt-1 text-xs text-secondary">At least 12 characters. Share it securely with the new admin.</p>
       </div>
       <div className="border-t border-surface-dim pt-5">
         <label htmlFor="currentPassword" className="block text-sm font-medium text-foreground">Your current admin password</label>

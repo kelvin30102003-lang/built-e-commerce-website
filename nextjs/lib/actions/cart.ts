@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { addCartItem, removeCartItem, updateCartItemQuantity } from "@/lib/shop/cart";
+import { consumeActionRateLimit } from "@/lib/security/rate-limit";
 
 const addSchema = z.object({
   productId: z.coerce.number().int().positive(),
@@ -24,6 +25,9 @@ export async function addToCartAction(formData: FormData) {
 
   let { data: { user } } = await supabase.auth.getUser();
   if (!user) {
+    if (!(await consumeActionRateLimit("guest-session", "all", 60, 3600))) {
+      return { error: "Guest checkout is temporarily unavailable. Try again later." };
+    }
     const { data, error } = await supabase.auth.signInAnonymously();
     if (error || !data.user) {
       return { error: "Guest checkout is unavailable right now. Please try again later." };

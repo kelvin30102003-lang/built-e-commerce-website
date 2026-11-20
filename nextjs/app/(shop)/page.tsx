@@ -20,28 +20,40 @@ export default async function HomePage() {
       {/* HERO                                                   */}
       {/* ====================================================== */}
 
-      <section className="flex min-h-[420px] w-full items-end bg-surface-low sm:min-h-[560px]">
-        <div className="relative z-10 w-full max-w-6xl px-4 py-12 sm:px-8 sm:py-16">
-          <div className="flex max-w-xl flex-col gap-4">
-            <span className="text-[11px] font-semibold uppercase tracking-label-wide text-foreground/70 ">
-              New Season
-            </span>
-
-            <h1 className="text-4xl font-semibold uppercase leading-tight tracking-tight text-foreground sm:text-5xl ">
-              Cute finds for everyday joy
-            </h1>
-
-            <p className="max-w-md text-foreground/80 ">
-              Plushies, home decor, and adorable essentials curated just for
-              you.
+      <section className="flex min-h-[420px] w-full items-center bg-white sm:min-h-[480px]">
+        <div className="mx-auto w-full max-w-7xl min-w-0 px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+          <div className="w-full min-w-0 max-w-2xl">
+            <p className="mb-5 inline-flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-neutral-600 sm:text-xs">
+              <span className="h-px w-8 bg-neutral-500" />
+              Little things, big joy
             </p>
 
-            <Link
-              href="/shop"
-              className="mt-2 inline-flex w-fit items-center gap-3 bg-foreground px-8 py-4 text-[11px] font-semibold uppercase tracking-label-wide text-surface-lowest transition-colors hover:bg-foreground/80"
-            >
-              Shop Now
-            </Link>
+            <h1 className="max-w-full break-words text-[clamp(2.5rem,6vw,4.5rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-black">
+              Find your new
+              <br />
+              <span className="font-normal">everyday favorite.</span>
+            </h1>
+
+            <p className="mt-5 max-w-md text-sm leading-6 text-neutral-600 sm:mt-6 sm:text-base sm:leading-7">
+              Cute, thoughtful finds for your space and your everyday. Pick
+              something that makes you smile.
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4">
+              <Link
+                href="/shop"
+                className="inline-flex min-h-12 items-center justify-center gap-4 bg-black px-7 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition-colors hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
+              >
+                Shop the collection
+                <span aria-hidden="true" className="text-base leading-none">↗</span>
+              </Link>
+              <Link
+                href="#new-arrivals"
+                className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-700 underline decoration-neutral-400 underline-offset-4 transition-colors hover:text-black"
+              >
+                Explore new arrivals
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -51,7 +63,7 @@ export default async function HomePage() {
         {/* NEW ARRIVALS                                          */}
         {/* ====================================================== */}
 
-        <section className="mt-12">
+        <section id="new-arrivals" className="mt-12 scroll-mt-24">
           <div className="flex items-end justify-between border-b border-surface-dim pb-3">
             <div>
               <span className="text-[11px] font-semibold uppercase tracking-label text-secondary">

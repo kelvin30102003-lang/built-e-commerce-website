@@ -7,8 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { consumeActionRateLimit } from "@/lib/security/rate-limit";
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(6).max(128),
 });
 
 export async function loginAction(formData: FormData) {
@@ -29,7 +29,7 @@ export async function loginAction(formData: FormData) {
 }
 
 const registerSchema = credentialsSchema.extend({
-  password: z.string().min(8),
+  password: z.string().min(8).max(128),
   fullName: z.string().trim().min(1).max(120),
 });
 
@@ -70,17 +70,20 @@ export async function logoutAction() {
 }
 
 export async function resetPasswordAction(formData: FormData) {
-  const parsed = z.string().email().safeParse(formData.get('email'));
+  const parsed = z.string().trim().toLowerCase().email().max(254).safeParse(formData.get('email'));
   if (!parsed.success) return { error: 'Enter a valid email address.' };
   if (!(await consumeActionRateLimit("password-reset", parsed.data, 3, 3600))) return { error: 'Too many requests. Please try again later.' };
   if (!(await consumeActionRateLimit("password-reset-ip", "all", 10, 3600))) return { error: 'Too many requests. Please try again later.' };
   const supabase = await createClient();
   const requestHeaders = await headers();
-  const candidate = process.env.NEXT_PUBLIC_SITE_URL ?? requestHeaders.get("origin");
+  const candidate = process.env.NEXT_PUBLIC_SITE_URL
+    ?? (process.env.NODE_ENV === "development" ? requestHeaders.get("origin") : null);
   let siteUrl: string;
   try {
     const parsedUrl = new URL(candidate ?? "");
-    if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error("Invalid protocol");
+    if (parsedUrl.protocol !== "https:" && !(process.env.NODE_ENV === "development" && parsedUrl.protocol === "http:")) {
+      throw new Error("Invalid protocol");
+    }
     siteUrl = parsedUrl.origin;
   } catch {
     return { error: 'Password reset is temporarily unavailable.' };
@@ -88,7 +91,10 @@ export async function resetPasswordAction(formData: FormData) {
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
     redirectTo: `${siteUrl}/auth/callback?next=/reset-password/update`,
   });
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("Password reset request failed", { status: error.status, code: error.code });
+    return { error: "If an account matches that email, a reset link will be sent." };
+  }
   return { success: true };
 }
 

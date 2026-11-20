@@ -45,7 +45,7 @@ export function ProductCard({
       <ProductWishlistButton productId={product.id} productSlug={product.slug} initiallyWishlisted={initiallyWishlisted} />
 
       <Link href={`/products/${product.slug}`} className="block w-full">
-        <div className="relative aspect-[4/5] w-full overflow-hidden border-b-2 border-black bg-[#FAFAF8]">
+        <div className="relative aspect-square w-full overflow-hidden border-b-2 border-black bg-[#FAFAF8]">
           {images[0] ? (
             <Image
               src={images[0].image_url}

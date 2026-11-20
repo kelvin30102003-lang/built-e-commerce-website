@@ -47,6 +47,7 @@ export async function createCategoryAction(formData: FormData) {
 
 export async function updateCategoryAction(id: number, formData: FormData) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid category." };
   const parsed = categorySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -74,6 +75,7 @@ export async function updateCategoryAction(id: number, formData: FormData) {
 
 export async function deleteCategoryAction(id: number) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid category." };
   const supabase = await createClient();
   const { error } = await supabase.from("categories").delete().eq("id", id);
   if (error) return { error: error.message };
