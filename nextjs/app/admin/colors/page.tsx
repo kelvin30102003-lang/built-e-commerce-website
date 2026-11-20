@@ -1,12 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { ColorManager } from "@/components/admin/color-manager";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 export default async function AdminColorsPage() {
+  await requireAdminCapability("products");
   const supabase = await createClient();
-  const { data: colors } = await supabase
+  const { data: colors, error } = await supabase
     .from("product_colors")
     .select("id, name, slug, image_url, hex_value, is_active, sort_order")
     .order("sort_order", { ascending: true });
+  if (error) return <ErrorMessage error={error} />;
 
   return (
     <div className="space-y-6">

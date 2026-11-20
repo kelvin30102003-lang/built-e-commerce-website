@@ -1,4 +1,5 @@
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
+import { AdminRealtimeSync } from '@/components/admin/admin-realtime-sync';
 import { LogoutButton } from '@/components/shop/logout-button';
 import { requireStaffOrAdmin } from '@/lib/auth/require-admin';
 
@@ -20,7 +21,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         }}
       />
       <div className="flex-1">
-        <header className="flex justify-end border-b border-surface-dim bg-surface px-6 py-3">
+        <header className="flex items-center justify-end gap-4 border-b border-surface-dim bg-surface px-6 py-3">
+          <AdminRealtimeSync />
           <LogoutButton />
         </header>
         <main className="p-6 bg-surface-lowest">{children}</main>

@@ -1,11 +1,11 @@
-import { requireStaffOrAdmin } from "@/lib/auth/require-admin";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
 import { createClient } from "@/lib/supabase/server";
 import { ErrorMessage } from "@/components/admin/ErrorMessage";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { formatDateTime } from "@/lib/shop/format";
 
 export default async function AdminActivityLogsPage() {
-  await requireStaffOrAdmin();
+  await requireAdminCapability("reports");
 
   const supabase = await createClient();
   const { data: logs, error } = await supabase

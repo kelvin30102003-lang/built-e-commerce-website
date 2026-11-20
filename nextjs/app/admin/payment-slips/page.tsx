@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatMmk, formatDateTime } from "@/lib/shop/format";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -13,6 +15,7 @@ export default async function AdminPaymentSlipsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  await requireAdminCapability("orders");
   const { status } = await searchParams;
   const activeStatus = status ?? "pending";
   const supabase = await createClient();
@@ -26,7 +29,8 @@ export default async function AdminPaymentSlipsPage({
     query = query.eq("status", activeStatus);
   }
 
-  const { data: slips } = await query.limit(100);
+  const { data: slips, error } = await query.limit(100);
+  if (error) return <ErrorMessage error={error} />;
 
   const tabs = [
     { key: "pending", label: "Pending" },

@@ -1,3 +1,11 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export type OrderStatus =
   | "pending"
   | "confirmed"
@@ -608,6 +616,37 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      admin_dashboard_metrics: {
+        Args: {
+          p_start_of_today: string;
+          p_start_of_tomorrow: string;
+          p_day_starts: string[];
+        };
+        Returns: {
+          total_orders: number;
+          today_orders: number;
+          pending_orders: number;
+          total_customers: number;
+          active_products: number;
+          low_stock_count: number;
+          total_sales: number;
+          today_sales: number;
+          sales_by_day: Json;
+          order_status_counts: Json;
+          low_stock_variants: Json;
+          recent_orders: Json;
+        }[];
+      };
+      admin_upsert_shipment: {
+        Args: {
+          p_order_id: number;
+          p_shipment_id: number | null;
+          p_courier_name: string | null;
+          p_tracking_number: string | null;
+          p_status: string;
+        };
+        Returns: number;
+      };
       place_order: {
         Args: {
           p_shipping: Record<string, unknown>;

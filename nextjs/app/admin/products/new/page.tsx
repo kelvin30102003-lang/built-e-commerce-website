@@ -1,12 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { ProductForm } from "@/components/admin/product-form";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 export default async function NewProductPage() {
+  await requireAdminCapability("products");
   const supabase = await createClient();
-  const [{ data: categories }, { data: brands }] = await Promise.all([
+  const [{ data: categories, error: categoriesError }, { data: brands, error: brandsError }] = await Promise.all([
     supabase.from("categories").select("id, name").order("name"),
     supabase.from("brands").select("id, name").order("name"),
   ]);
+  if (categoriesError || brandsError) return <ErrorMessage error={categoriesError ?? brandsError} />;
 
   return (
     <div className="max-w-2xl space-y-6">

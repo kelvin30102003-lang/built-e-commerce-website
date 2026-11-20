@@ -26,13 +26,15 @@ export async function updateOrderStatusAction(id: number, formData: FormData) {
 
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);
+  revalidatePath("/track");
+  revalidatePath("/orders/[orderNumber]", "page");
   return { success: true };
 }
 
 const shipmentSchema = z.object({
-  courier_name: z.string().optional(),
-  tracking_number: z.string().optional(),
-  status: z.enum(["not_shipped", "preparing", "shipped", "in_transit", "delivered", "returned"]),
+  courier_name: z.string().trim().max(120).optional(),
+  tracking_number: z.string().trim().max(120).optional(),
+  status: z.enum(["preparing", "shipped", "in_transit", "delivered", "returned"]),
 });
 
 export async function upsertShipmentAction(orderId: number, shipmentId: number | null, formData: FormData) {
@@ -41,31 +43,26 @@ export async function upsertShipmentAction(orderId: number, shipmentId: number |
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { courier_name, tracking_number, status } = parsed.data;
+  if (!Number.isSafeInteger(orderId) || orderId <= 0) return { error: "Invalid order." };
+  if (shipmentId !== null && (!Number.isSafeInteger(shipmentId) || shipmentId <= 0)) {
+    return { error: "Invalid shipment." };
+  }
 
   const supabase = await createClient();
-  const payload = {
-    order_id: orderId,
-    courier_name: courier_name || null,
-    tracking_number: tracking_number || null,
-    status,
-    shipped_at: status === "shipped" || status === "in_transit" ? new Date().toISOString() : null,
-    delivered_at: status === "delivered" ? new Date().toISOString() : null,
-  };
-
-  const { error } = shipmentId
-    ? await supabase.from("shipments").update(payload).eq("id", shipmentId)
-    : await supabase.from("shipments").insert(payload);
+  const { error } = await supabase.rpc("admin_upsert_shipment", {
+    p_order_id: orderId,
+    p_shipment_id: shipmentId,
+    p_courier_name: parsed.data.courier_name || null,
+    p_tracking_number: parsed.data.tracking_number || null,
+    p_status: parsed.data.status,
+  });
 
   if (error) return { error: error.message };
-
-  await supabase
-    .from("orders")
-    .update({ shipping_status: status })
-    .eq("id", orderId);
 
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/shipments");
+  revalidatePath("/track");
+  revalidatePath("/orders/[orderNumber]", "page");
   return { success: true };
 }

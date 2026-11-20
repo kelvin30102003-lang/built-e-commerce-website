@@ -67,6 +67,7 @@ export function CouponForm({ coupon, onDone }: { coupon?: Coupon; onDone: () => 
             type="number"
             step="0.01"
             name="discount_value"
+            min={0}
             defaultValue={coupon?.discount_value ?? 0}
             required
             className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
@@ -78,6 +79,7 @@ export function CouponForm({ coupon, onDone }: { coupon?: Coupon; onDone: () => 
             type="number"
             step="0.01"
             name="min_order_amount"
+            min={0}
             defaultValue={coupon?.min_order_amount ?? 0}
             required
             className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
@@ -89,6 +91,7 @@ export function CouponForm({ coupon, onDone }: { coupon?: Coupon; onDone: () => 
             type="number"
             step="0.01"
             name="max_discount_amount"
+            min={0}
             defaultValue={coupon?.max_discount_amount ?? ""}
             className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
           />
@@ -97,6 +100,8 @@ export function CouponForm({ coupon, onDone }: { coupon?: Coupon; onDone: () => 
           <label className="text-sm font-medium">Usage Limit</label>
           <input
             type="number"
+            min={1}
+            step={1}
             name="usage_limit"
             defaultValue={coupon?.usage_limit ?? ""}
             className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"

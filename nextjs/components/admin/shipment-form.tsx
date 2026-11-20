@@ -51,10 +51,10 @@ export function ShipmentForm({ orderId, shipment }: { orderId: number; shipment:
         <label className="text-sm font-medium">Shipping Status</label>
         <select
           name="status"
-          defaultValue={shipment?.status ?? "not_shipped"}
+          defaultValue={shipment?.status ?? "preparing"}
           className="mt-1 block w-full rounded-lg border border-pink-200 px-3 py-2 text-sm"
         >
-          {Object.entries(SHIPPING_STATUS_LABELS).map(([key, label]) => (
+          {Object.entries(SHIPPING_STATUS_LABELS).filter(([key]) => key !== "not_shipped").map(([key, label]) => (
             <option key={key} value={key}>
               {label}
             </option>

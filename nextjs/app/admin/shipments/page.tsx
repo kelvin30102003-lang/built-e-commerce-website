@@ -2,14 +2,18 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/shop/format";
 import { SHIPPING_STATUS_LABELS } from "@/lib/shop/constants";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 export default async function AdminShipmentsPage() {
+  await requireAdminCapability("orders");
   const supabase = await createClient();
-  const { data: shipments } = await supabase
+  const { data: shipments, error } = await supabase
     .from("shipments")
     .select("id, order_id, courier_name, tracking_number, status, shipped_at, orders(order_number)")
     .order("id", { ascending: false })
     .limit(100);
+  if (error) return <ErrorMessage error={error} />;
 
   return (
     <div className="space-y-6">

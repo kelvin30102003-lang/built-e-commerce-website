@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminCapability } from "@/lib/auth/require-admin";
 import { isValidImageFile } from "@/lib/security/image-validation";
+import { getPublicObjectPath } from "@/lib/storage/public-object-path";
 import { z } from "zod";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -33,6 +34,14 @@ export async function updatePaymentMethodQrAction(
     return { error: "Image must be under 5 MB." };
   }
 
+  const supabase = await createClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("payment_methods")
+    .select("qr_image_url")
+    .eq("code", code)
+    .maybeSingle();
+  if (existingError) return { error: existingError.message };
+
   const adminClient = createAdminClient();
 
   // Upload to storage
@@ -51,15 +60,21 @@ export async function updatePaymentMethodQrAction(
     .from(BUCKET)
     .getPublicUrl(path);
 
-  // Update the payment method row
-  const supabase = await createClient();
+  // Keep the database pointer valid: only remove the old object after the new one is saved.
   const { error: dbError } = await supabase
     .from("payment_methods")
     .update({ qr_image_url: publicUrl.publicUrl })
     .eq("code", code);
 
   if (dbError) {
+    await adminClient.storage.from(BUCKET).remove([path]);
     return { error: `Database update failed: ${dbError.message}` };
+  }
+
+  const oldPath = getPublicObjectPath(existing?.qr_image_url ?? null, BUCKET);
+  if (oldPath && oldPath !== path) {
+    const { error: cleanupError } = await adminClient.storage.from(BUCKET).remove([oldPath]);
+    if (cleanupError) console.error("Old payment QR cleanup failed:", cleanupError.message);
   }
 
   revalidatePath("/admin/payment-methods");
@@ -72,6 +87,13 @@ export async function removePaymentMethodQrAction(code: string) {
   if (!/^(kbzpay|wavepay|ayapay|cbpay)$/.test(code)) return { error: "Invalid payment method." };
   const supabase = await createClient();
 
+  const { data: existing, error: readError } = await supabase
+    .from("payment_methods")
+    .select("qr_image_url")
+    .eq("code", code)
+    .maybeSingle();
+  if (readError) return { error: readError.message };
+
   const { error } = await supabase
     .from("payment_methods")
     .update({ qr_image_url: null })
@@ -79,6 +101,12 @@ export async function removePaymentMethodQrAction(code: string) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  const oldPath = getPublicObjectPath(existing?.qr_image_url ?? null, BUCKET);
+  if (oldPath) {
+    const { error: cleanupError } = await createAdminClient().storage.from(BUCKET).remove([oldPath]);
+    if (cleanupError) console.error("Payment QR cleanup failed:", cleanupError.message);
   }
 
   revalidatePath("/admin/payment-methods");
@@ -116,6 +144,28 @@ export async function updatePaymentMethodAction(
   if (error) {
     return { error: error.message };
   }
+
+  revalidatePath("/admin/payment-methods");
+  revalidatePath("/checkout");
+  return { success: true };
+}
+
+export async function setPaymentMethodActiveAction(code: string, isActive: boolean) {
+  await requireAdminCapability("orders");
+  if (!/^(cod|kbzpay|wavepay|ayapay|cbpay)$/.test(code)) {
+    return { error: "Invalid payment method." };
+  }
+  if (typeof isActive !== "boolean") {
+    return { error: "Invalid active status." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("payment_methods")
+    .update({ is_active: isActive })
+    .eq("code", code);
+
+  if (error) return { error: error.message };
 
   revalidatePath("/admin/payment-methods");
   revalidatePath("/checkout");

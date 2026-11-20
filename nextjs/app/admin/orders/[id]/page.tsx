@@ -4,18 +4,24 @@ import { formatMmk, formatDateTime } from "@/lib/shop/format";
 import { PAYMENT_STATUS_LABELS } from "@/lib/shop/constants";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { ShipmentForm } from "@/components/admin/shipment-form";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 export default async function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdminCapability("orders");
   const { id } = await params;
   const orderId = Number(id);
   const supabase = await createClient();
 
-  const [{ data: order }, { data: items }, { data: shipment }, { data: slips }] = await Promise.all([
-    supabase.from("orders").select("*").eq("id", orderId).single(),
+  const [{ data: order, error: orderError }, { data: items, error: itemsError }, { data: shipment, error: shipmentError }, { data: slips, error: slipsError }] = await Promise.all([
+    supabase.from("orders").select("*").eq("id", orderId).maybeSingle(),
     supabase.from("order_items").select("*").eq("order_id", orderId),
     supabase.from("shipments").select("id, courier_name, tracking_number, status").eq("order_id", orderId).maybeSingle(),
     supabase.from("payment_slips").select("id, status, amount, slip_image_path").eq("order_id", orderId),
   ]);
+
+  const queryError = orderError ?? itemsError ?? shipmentError ?? slipsError;
+  if (queryError) return <ErrorMessage error={queryError} />;
 
   if (!order) notFound();
 

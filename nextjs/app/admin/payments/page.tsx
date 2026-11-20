@@ -1,13 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatMmk, formatDateTime } from "@/lib/shop/format";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 export default async function AdminPaymentsPage() {
+  await requireAdminCapability("orders");
   const supabase = await createClient();
-  const { data: payments } = await supabase
+  const { data: payments, error } = await supabase
     .from("payments")
     .select("id, payment_method, transaction_id, amount, status, paid_at, orders(order_number)")
     .order("id", { ascending: false })
     .limit(100);
+  if (error) return <ErrorMessage error={error} />;
 
   return (
     <div className="space-y-6">

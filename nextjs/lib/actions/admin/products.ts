@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminCapability } from "@/lib/auth/require-admin";
 import { isValidImageFile } from "@/lib/security/image-validation";
+import { getPublicObjectPath } from "@/lib/storage/public-object-path";
 
 function slugify(value: string) {
   return value
@@ -233,10 +234,14 @@ export async function addProductImageAction(productId: number, formData: FormDat
 
   const { data: publicUrl } = adminClient.storage.from("product-images").getPublicUrl(path);
 
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from("product_images")
     .select("*", { count: "exact", head: true })
     .eq("product_id", productId);
+  if (countError) {
+    await adminClient.storage.from("product-images").remove([path]);
+    return { error: countError.message };
+  }
 
   const { error } = await supabase.from("product_images").insert({
     product_id: productId,
@@ -244,7 +249,10 @@ export async function addProductImageAction(productId: number, formData: FormDat
     sort_order: count ?? 0,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    await adminClient.storage.from("product-images").remove([path]);
+    return { error: error.message };
+  }
 
   revalidatePath(`/admin/products/${productId}`);
   return { success: true };
@@ -252,9 +260,31 @@ export async function addProductImageAction(productId: number, formData: FormDat
 
 export async function deleteProductImageAction(imageId: number, productId: number) {
   await requireAdminCapability("products");
+  if (!Number.isSafeInteger(imageId) || imageId <= 0 || !Number.isSafeInteger(productId) || productId <= 0) {
+    return { error: "Invalid product image." };
+  }
   const supabase = await createClient();
-  const { error } = await supabase.from("product_images").delete().eq("id", imageId);
+  const { data: image, error: readError } = await supabase
+    .from("product_images")
+    .select("image_url")
+    .eq("id", imageId)
+    .eq("product_id", productId)
+    .maybeSingle();
+  if (readError) return { error: readError.message };
+  if (!image) return { error: "Product image not found." };
+
+  const { error } = await supabase
+    .from("product_images")
+    .delete()
+    .eq("id", imageId)
+    .eq("product_id", productId);
   if (error) return { error: error.message };
+
+  const imagePath = getPublicObjectPath(image.image_url, "product-images");
+  if (imagePath) {
+    const { error: cleanupError } = await createAdminClient().storage.from("product-images").remove([imagePath]);
+    if (cleanupError) console.error("Product image cleanup failed:", cleanupError.message);
+  }
 
   revalidatePath(`/admin/products/${productId}`);
   return { success: true };

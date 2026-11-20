@@ -2,22 +2,26 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PaymentSlipReview } from "@/components/admin/payment-slip-review";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 export default async function AdminPaymentSlipDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminCapability("orders");
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: slip } = await supabase
+  const { data: slip, error } = await supabase
     .from("payment_slips")
     .select(
       "id, amount, transaction_id, sender_name, sender_phone, status, admin_note, reject_reason, slip_image_path, orders(order_number), payment_methods(name)"
     )
     .eq("id", Number(id))
     .maybeSingle();
+  if (error) return <ErrorMessage error={error} />;
 
   if (!slip) notFound();
 

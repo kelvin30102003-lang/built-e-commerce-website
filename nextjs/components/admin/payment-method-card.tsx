@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useTransition, useRef, type ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
+import { AdminSuccessToast } from "@/components/admin/admin-success-toast";
 import {
   updatePaymentMethodQrAction,
   removePaymentMethodQrAction,
   updatePaymentMethodAction,
+  setPaymentMethodActiveAction,
 } from "@/lib/actions/admin/payment-methods";
 
 interface PaymentMethod {
@@ -26,11 +29,32 @@ export function PaymentMethodCard({ method }: { method: PaymentMethod }) {
     text: string;
   } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isActive, setIsActive] = useState(method.is_active);
   const [isUploadingQr, startQrTransition] = useTransition();
   const [isSavingDetails, startDetailsTransition] = useTransition();
   const [isRemovingQr, startRemoveTransition] = useTransition();
+  const [isTogglingActive, startActiveTransition] = useTransition();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  function handleToggleActive() {
+    const nextIsActive = !isActive;
+    setMessage(null);
+    startActiveTransition(async () => {
+      const result = await setPaymentMethodActiveAction(method.code, nextIsActive);
+      if (result.error) {
+        setMessage({ type: "error", text: result.error });
+        return;
+      }
+      setIsActive(nextIsActive);
+      setMessage({
+        type: "success",
+        text: `${method.name} is now ${nextIsActive ? "active" : "inactive"}.`,
+      });
+      router.refresh();
+    });
+  }
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -136,13 +160,22 @@ export function PaymentMethodCard({ method }: { method: PaymentMethod }) {
         <div className="flex items-center gap-2">
           <span
             className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-label ${
-              method.is_active
+              isActive
                 ? "bg-green-50 text-green-700"
                 : "bg-surface-high text-secondary"
             }`}
           >
-            {method.is_active ? "Active" : "Inactive"}
+            {isActive ? "Active" : "Inactive"}
           </span>
+          <button
+            type="button"
+            onClick={handleToggleActive}
+            disabled={isTogglingActive}
+            aria-label={`${isActive ? "Deactivate" : "Activate"} ${method.name}`}
+            className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-label transition-colors disabled:opacity-50 ${isActive ? "border border-surface-dim bg-white text-foreground hover:bg-surface-low" : "bg-primary text-primary-foreground hover:opacity-80"}`}
+          >
+            {isTogglingActive ? "Saving..." : isActive ? "Deactivate" : "Activate"}
+          </button>
           <span className="rounded-full bg-surface-lowest px-3 py-1 text-[10px] font-semibold uppercase tracking-label text-secondary">
             {method.code}
           </span>
@@ -350,13 +383,13 @@ export function PaymentMethodCard({ method }: { method: PaymentMethod }) {
         </div>
 
         {/* Message */}
-        {message && (
+        {message?.type === "success" && (
+          <AdminSuccessToast message={message.text} onDismiss={() => setMessage(null)} />
+        )}
+        {message?.type === "error" && (
           <div
-            className={`mt-4 px-4 py-3 text-sm ${
-              message.type === "success"
-                ? "border border-green-200 bg-green-50 text-green-700"
-                : "border border-error/20 bg-error/5 text-error"
-            }`}
+            role="alert"
+            className="mt-4 border border-error/20 bg-error/5 px-4 py-3 text-sm text-error"
           >
             {message.text}
           </div>

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { log_admin_activity } from "@/lib/supabase/rpc";
+import { ContactSavedToast } from "@/components/admin/contact-saved-toast";
 
 export async function saveContactSettingsAction(formData: FormData) {
   "use server";
@@ -82,11 +83,7 @@ export default async function AdminContactPage({
         </p>
       </header>
 
-      {params.saved === "1" && (
-        <p role="status" className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">
-          Contact details saved.
-        </p>
-      )}
+      {params.saved === "1" && <ContactSavedToast />}
 
       <form action={saveContactSettingsAction} className="space-y-5 rounded-xl border border-surface-dim bg-white p-5 sm:p-6">
         <div>

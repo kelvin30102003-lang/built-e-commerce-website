@@ -3,12 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { formatMmk, formatDateTime } from "@/lib/shop/format";
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/shop/constants";
 import type { OrderStatus } from "@/lib/types/database";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 export default async function AdminOrdersPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  await requireAdminCapability("orders");
   const { status } = await searchParams;
   const supabase = await createClient();
 
@@ -22,7 +25,8 @@ export default async function AdminOrdersPage({
     query = query.eq("order_status", status as OrderStatus);
   }
 
-  const { data: orders } = await query;
+  const { data: orders, error } = await query;
+  if (error) return <ErrorMessage error={error} />;
 
   return (
     <div className="space-y-6">

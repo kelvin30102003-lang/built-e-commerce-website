@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatMmk } from "@/lib/shop/format";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 const STATUS_STYLES: Record<string, string> = {
   active: "bg-green-100 text-green-700",
@@ -10,13 +12,15 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default async function AdminProductsPage() {
+  await requireAdminCapability("products");
   const supabase = await createClient();
-  const { data: products } = await supabase
+  const { data: products, error } = await supabase
     .from("products")
     .select(
       "id, name, status, categories(name), brands(name), product_variants(price, stock_quantity)",
     )
     .order("created_at", { ascending: false });
+  if (error) return <ErrorMessage error={error} />;
 
   return (
     <div className="space-y-6">

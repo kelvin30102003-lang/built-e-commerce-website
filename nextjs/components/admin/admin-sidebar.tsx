@@ -5,7 +5,6 @@ const NAV_SECTIONS = [
     title: "Overview",
     links: [
       { href: "/admin", label: "Dashboard" },
-      { href: "/admin/notifications", label: "Notifications" },
     ],
   },
   {
@@ -31,7 +30,7 @@ const NAV_SECTIONS = [
   {
     title: "Support",
     links: [
-      { href: "/admin/users", label: "Users", adminOnly: true },
+      { href: "/admin/create-admin", label: "Create Admin Account", adminOnly: true },
       { href: "/admin/contact", label: "Contact Details", adminOnly: true },
       { href: "/admin/activity-logs", label: "Activity Log", capability: "reports" },
       { href: "/admin/profile", label: "My Profile" },
@@ -47,7 +46,7 @@ export function AdminSidebar({
   permissions: Record<string, boolean>;
 }) {
   return (
-    <aside className="w-56 shrink-0 border-r border-surface-dim bg-surface p-4">
+    <aside className="w-56 shrink-0 border-r border-surface-dim bg-surface p-4 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
       <Link href="/" className="font-display text-lg font-bold text-primary">
         LuvShop Admin
       </Link>
@@ -60,22 +59,22 @@ export function AdminSidebar({
           });
           if (!links.length) return null;
           return (
-          <div key={section.title}>
-            <p className="text-xs font-semibold uppercase text-on-surface-variant">
-              {section.title}
-            </p>
-            <div className="mt-2 space-y-1">
-              {links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="block rounded-lg px-3 py-2 text-sm hover:bg-surface-container-lowest hover:text-primary"
-                >
-                  {link.label}
-                </Link>
-              ))}
+            <div key={section.title}>
+              <p className="text-xs font-semibold uppercase text-on-surface-variant">
+                {section.title}
+              </p>
+              <div className="mt-2 space-y-1">
+                {links.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="block rounded-lg px-3 py-2 text-sm hover:bg-surface-container-lowest hover:text-primary"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
           );
         })}
       </nav>

@@ -16,6 +16,7 @@ export async function approvePaymentSlipAction(slipId: number, adminNote: string
 
   revalidatePath("/admin/payment-slips");
   revalidatePath("/admin/orders");
+  revalidatePath("/admin/payments");
   return { success: true };
 }
 
@@ -32,5 +33,6 @@ export async function rejectPaymentSlipAction(slipId: number, reason: string, ad
 
   revalidatePath("/admin/payment-slips");
   revalidatePath("/admin/orders");
+  revalidatePath("/admin/payments");
   return { success: true };
 }

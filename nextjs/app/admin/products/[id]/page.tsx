@@ -3,19 +3,22 @@ import { createClient } from "@/lib/supabase/server";
 import { ProductForm } from "@/components/admin/product-form";
 import { VariantManager } from "@/components/admin/variant-manager";
 import { ImageManager } from "@/components/admin/image-manager";
+import { requireAdminCapability } from "@/lib/auth/require-admin";
+import { ErrorMessage } from "@/components/admin/ErrorMessage";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdminCapability("products");
   const { id } = await params;
   const productId = Number(id);
   const supabase = await createClient();
 
-  const [{ data: product }, { data: categories }, { data: brands }, { data: variants }, { data: images }, { data: colors }] =
+  const [{ data: product, error: productError }, { data: categories, error: categoriesError }, { data: brands, error: brandsError }, { data: variants, error: variantsError }, { data: images, error: imagesError }, { data: colors, error: colorsError }] =
     await Promise.all([
       supabase
         .from("products")
         .select("id, name, short_description, description, category_id, brand_id, status")
         .eq("id", productId)
-        .single(),
+        .maybeSingle(),
       supabase.from("categories").select("id, name, is_color_filter_category").order("name"),
       supabase.from("brands").select("id, name").order("name"),
       supabase
@@ -30,6 +33,9 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         .order("sort_order"),
       supabase.from("product_colors").select("id, name").order("sort_order"),
     ]);
+
+  const queryError = productError ?? categoriesError ?? brandsError ?? variantsError ?? imagesError ?? colorsError;
+  if (queryError) return <ErrorMessage error={queryError} />;
 
   if (!product) notFound();
 
