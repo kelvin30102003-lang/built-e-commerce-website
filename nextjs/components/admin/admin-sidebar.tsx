@@ -12,7 +12,7 @@ const NAV_SECTIONS = [
     links: [
       { href: "/admin/products", label: "Products", capability: "products" },
       { href: "/admin/categories", label: "Categories", capability: "products" },
-      { href: "/admin/colors", label: "Colors", capability: "products" },
+      
       { href: "/admin/brands", label: "Brands", capability: "products" },
       { href: "/admin/coupons", label: "Coupons", capability: "coupons" },
     ],
@@ -47,7 +47,7 @@ export function AdminSidebar({
 }) {
   return (
     <aside className="w-56 shrink-0 border-r border-surface-dim bg-surface p-4 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
-      <Link href="/" className="font-display text-lg font-bold text-primary">
+      <Link href="/" className="font-display text-lg font-bold text-black">
         LuvShop Admin
       </Link>
       <nav className="mt-6 space-y-6">
@@ -60,7 +60,7 @@ export function AdminSidebar({
           if (!links.length) return null;
           return (
             <div key={section.title}>
-              <p className="text-xs font-semibold uppercase text-on-surface-variant">
+              <p className="text-xs font-semibold uppercase text-neutral-500">
                 {section.title}
               </p>
               <div className="mt-2 space-y-1">
@@ -68,7 +68,7 @@ export function AdminSidebar({
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="block rounded-lg px-3 py-2 text-sm hover:bg-surface-container-lowest hover:text-primary"
+                    className="block rounded-lg px-3 py-2 text-sm text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black"
                   >
                     {link.label}
                   </Link>
